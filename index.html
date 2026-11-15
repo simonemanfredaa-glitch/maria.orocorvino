@@ -760,6 +760,11 @@ select.input:disabled{opacity:.6}
 .nav .sosbtn{font-size:15px;font-weight:800;letter-spacing:.1em;color:#B4513F;background:#FBEFEC;border:1.5px solid #EBC3BA;width:58px;min-height:38px;border-radius:12px;margin:8px 0 2px}
 .nav .sosbtn:hover{background:#F6E0DA}
 @media (max-height:500px){ .nav .sosbtn{font-size:13px;min-height:30px;width:50px;margin:4px 0 0} }
+
+/* ---- sezioni v1.9 ---- */
+.sw.sm{width:16px;height:16px;border-radius:50%;display:inline-block;flex:none}
+.li-cat .dashbtn{border:0;padding:0;cursor:pointer;width:22px;height:12px;border-radius:6px}
+.li-newcat{display:block;width:calc(100% - 24px);margin:12px;height:46px;border:1.5px dashed var(--line);border-radius:12px;background:transparent;color:var(--gold-d);font-weight:700;font-size:15px}
 </style>
 </head>
 <body>
@@ -834,6 +839,10 @@ const CATS=[
   {id:'Estetica',bar:'#C98AA0'},
 ];
 const SECS=['Capelli','Estetica','Attrezzature'];
+function catPal(catId){ const c=CATS.find(x=>x.id===catId)||CATS[0]; return PALETTE.find(p=>p.bar===c.bar)||PALETTE[0]; }
+function syncCats(){ try{ const st=S(); if(st.cats&&st.cats.length) CATS.splice(0,CATS.length,...st.cats.map(c=>({...c})));
+  (DB.services||[]).forEach(sv=>{ if(!CATS.find(c=>c.id===sv.cat)) CATS.push({id:sv.cat,bar:sv.bar||PALETTE[0].bar}); const p=catPal(sv.cat); sv.fill=p.fill; sv.txt=p.txt; sv.bar=p.bar; }); }catch(e){} }
+function saveCats(){ S().cats=CATS.map(c=>({id:c.id,bar:c.bar})); syncCats(); save(); }
 const SECCOL={Capelli:['#EAF2ED','#2C4A3A'],Estetica:['#F8EAEE','#6A2C40'],Attrezzature:['#E8EDF4','#3A4A66']};
 const PALETTE=[
   {fill:'#EAF2ED',txt:'#2C4A3A',bar:'#7FA892'},{fill:'#E8F0F6',txt:'#28445C',bar:'#7F9FB8'},{fill:'#E6F2F1',txt:'#22504C',bar:'#76B0AA'},
@@ -1564,6 +1573,7 @@ function newClientSheet(prefill, cb, back){
 
 /* ============ LISTINO (3) ============ */
 function renderListino(){
+  captureSvcForm();
   $('#topbar').innerHTML=`<h1>Listino servizi</h1><span class="sub">${DB.services.length} servizi in ${CATS.length} sezioni</span><span class="grow"></span><div class="search-in hide-phone" style="width:240px">${ICONS.search}<input id="svq2" placeholder="Cerca servizio" value="${esc(ui.svcQ)}"></div><button class="btn primary" data-act="new-svc">${ICONS.plus}<span class="hide-phone">Nuovo servizio</span></button>`;
   if(!ui.svcSel || !DB.services.find(s=>s.id===ui.svcSel)) ui.svcSel=DB.services[0]?.id;
   const phone=isStack();
@@ -1576,11 +1586,16 @@ function renderSvcList(){
   const month=new Date().getMonth(), year=new Date().getFullYear();
   const cnt={}; DB.appts.forEach(a=>{ if(a.status==='paid'){ const d=parse(a.date); if(d.getMonth()===month&&d.getFullYear()===year) a.services.forEach(id=>cnt[id]=(cnt[id]||0)+1); } });
   $('#lilist').innerHTML=CATS.map(c=>{ const items=DB.services.filter(s=>s.cat===c.id&&(!q||s.name.toLowerCase().includes(q)));
-    return `<div class="li-cat"><span class="dash" style="background:${c.bar}"></span><b>${c.id}</b><span class="small muted">${items.length} servizi</span><span class="grow"></span><button class="li-add" data-act="new-svc" data-cat="${c.id}">+ Aggiungi</button></div>`+
-      items.map(s=>`<button class="li-row ${ui.svcSel===s.id?'on':''} ${s.active?'':'off'}" data-act="sel-svc" data-id="${s.id}" style="border-left-color:${c.bar}"><span class="li-n">${esc(s.name)}${s.posa?` <small>· posa ${s.posa}′</small>`:''}${s.active?'':' <small>· non attivo</small>'}</span><span class="li-d">${s.dur} min</span><span class="li-p">${eur(s.price)}</span><span class="li-c">${cnt[s.id]||0}/mese</span></button>`).join(''); }).join('');
+    return `<div class="li-cat"><button class="dash dashbtn" style="background:${c.bar}" data-act="cat-edit" data-cat="${esc(c.id)}" aria-label="Cambia colore o nome della sezione"></button><b data-act="cat-edit" data-cat="${esc(c.id)}" style="cursor:pointer">${c.id}</b><span class="small muted">${items.length} servizi</span><span class="grow"></span><button class="li-add" data-act="new-svc" data-cat="${c.id}">+ Aggiungi</button></div>`+
+      items.map(s=>`<button class="li-row ${ui.svcSel===s.id?'on':''} ${s.active?'':'off'}" data-act="sel-svc" data-id="${s.id}" style="border-left-color:${c.bar}"><span class="li-n">${esc(s.name)}${s.posa?` <small>· posa ${s.posa}′</small>`:''}${s.active?'':' <small>· non attivo</small>'}</span><span class="li-d">${s.dur} min</span><span class="li-p">${eur(s.price)}</span><span class="li-c">${cnt[s.id]||0}/mese</span></button>`).join(''); }).join('')+`<button class="li-newcat" data-act="cat-edit">+ Nuova sezione</button>`;
 }
+function captureSvcForm(){ const f=$('#sv-name'); if(!f) return; const id=f.dataset.id; if(!id) return;
+  ui.svcDraft={id,name:f.value,cat:$('#sv-cat').value,dur:+$('#sv-dur').value,posa:+$('#sv-posa').value,price:$('#sv-price').value}; }
 function renderSvcEdit(){
-  const s=DB.services.find(x=>x.id===ui.svcSel); const el=$('#liedit'); if(!s){ el.innerHTML=''; return; }
+  captureSvcForm();
+  const s0=DB.services.find(x=>x.id===ui.svcSel); const el=$('#liedit'); if(!s0){ el.innerHTML=''; return; }
+  const dr=(ui.svcDraft&&ui.svcDraft.id===s0.id)?ui.svcDraft:null; if(!dr) ui.svcDraft=null;
+  const s=dr?{...s0,name:dr.name,cat:dr.cat,dur:dr.dur,posa:dr.posa,price:dr.price}:s0;
   const month=new Date().getMonth();
   let n=0,rev=0; DB.appts.forEach(a=>{ if(a.status==='paid'&&parse(a.date).getMonth()===month&&a.services.includes(s.id)){ n++; rev+=s.price; } });
   const durs=[15,30,45,60,75,90,105,120,150,180]; const posas=[0,10,15,20,25,30,35,40,45,60];
@@ -1589,16 +1604,32 @@ function renderSvcEdit(){
   el.innerHTML=`<div class="card li-edit">
     <button class="btn ghost sm only-stack" data-act="svc-back" style="align-self:flex-start">${ICONS.back} Tutti i servizi</button>
     <div style="display:flex;align-items:baseline;gap:10px"><h2 class="grow">${esc(s.name)}</h2><span class="small muted">${n} questo mese · ${eur(rev)}</span></div>
-    <div class="row"><div class="field"><label>Nome</label><input class="input" id="sv-name" value="${esc(s.name)}"></div><div class="field"><label>Sezione</label><select class="input" id="sv-cat">${CATS.map(c=>`<option ${c.id===s.cat?'selected':''}>${c.id}</option>`).join('')}</select></div></div>
+    <div class="row"><div class="field"><label>Nome</label><input class="input" id="sv-name" data-id="${s0.id}" value="${esc(s.name)}"></div><div class="field"><label>Sezione</label><select class="input" id="sv-cat">${CATS.map(c=>`<option ${c.id===s.cat?'selected':''}>${c.id}</option>`).join('')}</select></div></div>
     <div class="row"><div class="field"><label>Durata</label><select class="input" id="sv-dur">${durs.map(d=>`<option value="${d}" ${d===s.dur?'selected':''}>${d} min</option>`).join('')}</select></div><div class="field"><label>Tempo di posa</label><select class="input" id="sv-posa">${posas.map(d=>`<option value="${d}" ${d===(s.posa||0)?'selected':''}>${d?d+' min':'Nessuno'}</option>`).join('')}</select></div><div class="field"><label>Prezzo €</label><input class="input" id="sv-price" inputmode="decimal" value="${s.price}"></div></div>
     <div class="small muted" style="margin-top:-6px">Il tempo di posa è il tempo in cui puoi lavorare su un'altra cliente.</div>
-    <div>${lab('Colore in agenda')}<div class="swatches">${PALETTE.map((p,i)=>`<button class="sw ${p.bar===s.bar?'on':''}" style="background:${p.bar}" data-act="sv-col" data-i="${i}" aria-label="Colore ${i+1}"></button>`).join('')}</div></div>
+    <div class="small muted" style="display:flex;align-items:center;gap:8px"><span class="sw sm" style="background:${catPal(s.cat).bar}"></span>Colore in agenda: quello della sezione “${esc(s.cat)}”. Si cambia dalla sezione.</div>
     <div><div style="display:flex;align-items:center">${lab('Prodotti consumati a ogni servizio')}<span class="grow"></span><button class="li-add" data-act="cons-add">+ Collega prodotto</button></div>
       ${cons?`<div class="cons-box">${cons}</div><div class="small muted" style="margin-top:6px">Quando incassi “${esc(s.name)}”, il magazzino scala da solo queste quantità.</div>`:`<div class="cons-empty">${ICONS.magazzino}<span>Facoltativo. Es. Colore → 1 tinta + 60 ml di ossigeno: il magazzino si scala da solo a ogni servizio.</span></div>`}</div>
     <div class="li-foot">${tgl(s.active,'sv-active')}<div class="grow"><b>Attivo</b><div class="small muted">Se lo spegni non compare nei nuovi appuntamenti, ma resta nello storico.</div></div></div>
     <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn ghost" data-act="del-svc" data-id="${s.id}" style="color:var(--danger)">Elimina</button><button class="btn primary" data-act="save-svc">Salva modifiche</button></div>
   </div>`;
+  bindSvcForm();
 }
+function catSheet(catId){
+  const c=catId?CATS.find(x=>x.id===catId):null; const used=CATS.filter(x=>x!==c).map(x=>x.bar);
+  let bar=c?c.bar:(PALETTE.find(p=>!used.includes(p.bar))||PALETTE[0]).bar;
+  openSheet(`<div class="sheet-h"><button class="btn ghost sm" data-act="close">Annulla</button><h2>${c?'Modifica sezione':'Nuova sezione'}</h2><button class="btn sm primary" id="cs-ok">Salva</button></div>
+   <div class="sheet-b"><div class="field"><label>Nome della sezione</label><input class="input" id="cs-name" value="${c?esc(c.id):''}" placeholder="es. Trattamenti"></div>
+   <div class="field"><label>Colore in agenda</label><div class="swatches" id="cs-sw">${PALETTE.map(p=>`<button type="button" class="sw ${p.bar===bar?'on':''}" style="background:${p.bar}" data-bar="${p.bar}"></button>`).join('')}</div>
+   <div class="small muted" style="margin-top:8px">Tutti i servizi della sezione prendono questo colore.</div></div></div>`,'md');
+  $('#cs-sw').onclick=e=>{ const b=e.target.closest('[data-bar]'); if(!b) return; bar=b.dataset.bar; $('#cs-sw').querySelectorAll('.sw').forEach(x=>x.classList.toggle('on',x===b)); };
+  $('#cs-ok').onclick=()=>{ const name=$('#cs-name').value.trim(); if(!name){ toast('Scrivi il nome della sezione'); return; }
+    if(CATS.find(x=>x.id.toLowerCase()===name.toLowerCase()&&x!==c)){ toast('Esiste già una sezione con questo nome'); return; }
+    if(c){ DB.services.forEach(sv=>{ if(sv.cat===c.id) sv.cat=name; }); if(ui.svcDraft&&ui.svcDraft.cat===c.id) ui.svcDraft.cat=name; c.id=name; c.bar=bar; }
+    else CATS.push({id:name,bar});
+    saveCats(); closeSheet(); render(); toast(c?'Sezione aggiornata':'Sezione creata'); };
+}
+function bindSvcForm(){ const c=$('#sv-cat'); if(c) c.onchange=()=>renderSvcEdit(); }
 function consAddSheet(){
   const s=DB.services.find(x=>x.id===ui.svcSel);
   const prods=DB.products.filter(p=>p.kind!=='attrezzo');
@@ -1869,6 +1900,7 @@ setInterval(()=>{ if(S().pin.on && unlocked && Date.now()-lastAct>10*60*1000){ u
 
 /* ============ ROUTER ============ */
 function render(){
+  syncCats();
   document.body.classList.toggle('stack',isStack()); document.body.classList.toggle('tport',!isPhone()&&isStack());
   $('#topbar').classList.remove('agenda-top','phone-top');
   renderNav(); if(ui.sel && !DB.appts.find(a=>a.id===ui.sel)) ui.sel=null; renderAgenda._keep = renderAgenda._keep || (ui.view==='agenda' && !!$('#calbody'));
@@ -1900,6 +1932,7 @@ document.addEventListener('click',e=>{
     case 'wk-sl': case 'wk-sr': { const cb=$('#calbody'); const cw=parseFloat(getComputedStyle($('.cal')).getPropertyValue('--cw'))||100; cb.scrollBy({left:(A==='wk-sr'?1:-1)*cw,behavior:'smooth'}); break; }
     case 'set-wkm': S().wkClosed=t.dataset.m; save(); render(); break;
     case 'sos': openSOS(); break;
+    case 'cat-edit': catSheet(t.dataset.cat||null); break;
     case 'goto-day': ui.date=parse(t.dataset.d); ui.mode='day'; renderAgenda._keep=false; render(); break;
     case 'new-appt': newDraft(); break;
     case 'close': closeSheet(); break;
@@ -1938,12 +1971,12 @@ document.addEventListener('click',e=>{
     case 'save-tech': { const c=cli(id); c.tech=c.tech||{}; document.querySelectorAll('[data-tech]').forEach(i=>c.tech[i.dataset.tech]=i.value.trim()); c.note=$('#cnote').value; c.phone=$('#cphone').value.trim(); const b=$('#cbday').value.trim().match(/^(\d{1,2})\/(\d{1,2})$/); c.birthday=b?pad(+b[2])+'-'+pad(+b[1]):''; ui.techEdit=false; save(); renderClientList(); renderClientDetail(); toast('Scheda salvata'); break; }
     case 'privacy': { const c=cli(id); c.privacy=c.privacy?'':TODAY; save(); renderClientDetail(); toast(c.privacy?'Consenso registrato':'Consenso tolto'); break; }
     /* listino */
-    case 'sel-svc': ui.svcSel=id; ui.svcMobileEdit=true; if(isStack()) renderListino(); else { renderSvcList(); renderSvcEdit(); } break;
+    case 'sel-svc': ui.svcDraft=null; ui.svcSel=id; ui.svcMobileEdit=true; if(isStack()) renderListino(); else { renderSvcList(); renderSvcEdit(); } break;
     case 'svc-back': ui.svcMobileEdit=false; renderListino(); break;
-    case 'new-svc': { const cat=t.dataset.cat||CATS[0].id; const ci=CATS.findIndex(c=>c.id===cat); const p=PALETTE[[0,4,3,6][ci]||0]; const s={id:'s'+uid(),name:'Nuovo servizio',cat,dur:30,posa:0,price:0,...p,active:true,consumes:[]}; DB.services.push(s); save(); ui.svcSel=s.id; ui.svcMobileEdit=true; renderListino(); setTimeout(()=>{ const n=$('#sv-name'); n&&n.select(); },50); break; }
+    case 'new-svc': { const cat=t.dataset.cat||CATS[0].id; const ci=CATS.findIndex(c=>c.id===cat); const p=catPal(cat); ui.svcDraft=null; const s={id:'s'+uid(),name:'Nuovo servizio',cat,dur:30,posa:0,price:0,...p,active:true,consumes:[]}; DB.services.push(s); save(); ui.svcSel=s.id; ui.svcMobileEdit=true; renderListino(); setTimeout(()=>{ const n=$('#sv-name'); n&&n.select(); },50); break; }
     case 'sv-col': { const s=DB.services.find(x=>x.id===ui.svcSel); Object.assign(s,PALETTE[+t.dataset.i]); save(); renderSvcEdit(); renderSvcList(); break; }
     case 'sv-active': { const s=DB.services.find(x=>x.id===ui.svcSel); s.active=!s.active; save(); renderSvcEdit(); renderSvcList(); break; }
-    case 'save-svc': { const s=DB.services.find(x=>x.id===ui.svcSel); s.name=$('#sv-name').value.trim()||s.name; s.cat=$('#sv-cat').value; s.dur=+$('#sv-dur').value; s.posa=+$('#sv-posa').value; s.price=num($('#sv-price').value); save(); renderSvcList(); renderSvcEdit(); toast('Servizio salvato'); break; }
+    case 'save-svc': { const s=DB.services.find(x=>x.id===ui.svcSel); s.name=$('#sv-name').value.trim()||s.name; s.cat=$('#sv-cat').value; s.dur=+$('#sv-dur').value; s.posa=+$('#sv-posa').value; s.price=num($('#sv-price').value); ui.svcDraft=null; Object.assign(s,catPal(s.cat)); save(); renderSvcList(); renderSvcEdit(); toast('Servizio salvato'); break; }
     case 'del-svc': confirmBox('Eliminare “'+esc(svc(id).name)+'” dal listino?<div class="small muted" style="font-weight:400;margin-top:6px">Se l\'hai già usato, meglio spegnere “Attivo”.</div>','Elimina',()=>{ DB.services=DB.services.filter(s=>s.id!==id); ui.svcSel=null; save(); closeSheet(); renderListino(); }); break;
     case 'cons-add': consAddSheet(); break;
     case 'cons-rm': { const s=DB.services.find(x=>x.id===ui.svcSel); s.consumes.splice(+t.dataset.i,1); save(); renderSvcEdit(); break; }
