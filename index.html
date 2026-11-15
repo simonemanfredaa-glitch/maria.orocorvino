@@ -756,6 +756,10 @@ select.input:disabled{opacity:.6}
 .sosbig.call{background:var(--gold-d)} .sosbig.wa{background:#2E9E5B}
 @media (max-width:760px) and (min-height:501px){ .nav .sosbtn{display:none} }
 @media (max-height:500px){ .nav .sosbtn{min-height:44px} }
+
+.nav .sosbtn{font-size:19px;font-weight:800;letter-spacing:.08em;color:#fff;background:#C0533F;width:62px;min-height:50px;border-radius:14px;margin:8px 0 2px}
+.nav .sosbtn:hover{background:#A9452F}
+@media (max-height:500px){ .nav .sosbtn{font-size:15px;min-height:36px;width:52px;margin:4px 0 0} }
 </style>
 </head>
 <body>
@@ -962,7 +966,7 @@ function renderNav(){
   document.body.dataset.logo='c';
   $('#nav').innerHTML = `<div class="brand logo" title="${esc(S().salon.name)}"><span class="lg-circ"><i class="lg-M"></i></span><i class="lg-maria"></i><span class="lg-oro">OROCORVINO</span></div>`+
     items.map(([k,l])=>`<button data-act="view" data-v="${k}" class="${ui.view===k?'on':''}">${ICONS[k]}${l}${k==='magazzino'&&low?`<span class="badge">${low}</span>`:''}</button>`).join('')+
-    `<div class="spacer"></div><button class="${ui.view==='impostazioni'?'on':''}" data-act="view" data-v="impostazioni">${ICONS.gear}Impostaz.</button><button class="sosbtn" data-act="sos">${ICONS.sos}SOS</button>`;
+    `<div class="spacer"></div><button class="${ui.view==='impostazioni'?'on':''}" data-act="view" data-v="impostazioni">${ICONS.gear}Impostaz.</button><button class="sosbtn" data-act="sos" aria-label="SOS: scrivi su WhatsApp">SOS</button>`;
 }
 
 /* ============ AGENDA ============ */
