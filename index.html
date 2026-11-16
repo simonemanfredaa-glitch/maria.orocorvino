@@ -1045,7 +1045,10 @@ async function syncConnect(url,key){
   SY.cfg={url:url.trim(),key:key.trim()};
   try{ await syncCall({action:'ping'}); }catch(e){ const m=e.message==='chiave'?'Chiave sbagliata':'Indirizzo non raggiungibile'; SY.cfg=null; syncStore(); toast(m); return false; }
   syncStore();
-  const got=await syncPull({force:true,onEmpty:async()=>{ SY.snap={}; syncDiff(); syncStore(); syncState('pending'); await syncFlush(); SY.lastPull=Date.now(); syncStore(); toast('Dati di questo dispositivo copiati sul foglio'); }});
+  const got=await syncPull({force:true,onEmpty:async()=>{
+    const ok=await new Promise(res=>confirmBox('Il foglio Google è vuoto<div class="small muted" style="font-weight:400;margin-top:6px">Vuoi copiarci i dati che ci sono ora su questo dispositivo? Se sono dati di prova, premi Annulla e aspetta che vengano caricati quelli veri.</div>','Copia sul foglio',()=>{closeSheet();res(true);},()=>{closeSheet();res(false);}));
+    if(!ok){ syncDisconnect(); toast('Non collegato: il foglio è ancora vuoto'); return; }
+    SY.snap={}; syncDiff(); syncStore(); syncState('pending'); await syncFlush(); SY.lastPull=Date.now(); syncStore(); toast('Dati di questo dispositivo copiati sul foglio'); }});
   if(got) toast('Collegato: dati scaricati dal foglio');
   render(); return true;
 }
