@@ -1306,8 +1306,8 @@ const SOS_OPTS=[
 function sosDevice(){ const u=navigator.userAgent; const ipad=/iPad/.test(u)||(/Macintosh/.test(u)&&navigator.maxTouchPoints>1);
   const d=ipad?'iPad':/iPhone/.test(u)?'iPhone':/Android/.test(u)?'Android':'computer'; return d+(innerWidth>innerHeight?' orizzontale':' verticale'); }
 function sosText(label,extra){ const h=helpInfo(); const now=new Date();
-  return `Ciao ${h.name}, ho un problema con il gestionale.\n\n❗ ${label}`+(extra?`\n\n${extra}`:'')+
-    `\n\n— Pagina: ${VIEWNAME[ui.view]||ui.view} · ${sosDevice()} · ${now.toLocaleDateString('it-IT')} ${now.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}`+(typeof syncOn==='function'?` · ${syncOn()?'collegata al foglio':'non collegata'}`:''); }
+  return `Ciao ${h.name}, ho un problema con il gestionale.\n\nProblema: ${label}`+(extra?`\n\n${extra}`:'')+
+    `\n\n(Dettagli tecnici: pagina ${VIEWNAME[ui.view]||ui.view}, ${sosDevice()}, ${now.toLocaleDateString('it-IT')} ore ${now.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}, `+(syncOn()?'dati collegati al foglio Google':'dati NON collegati al foglio Google')+')'; }
 function sosNum(){ const d=String(helpInfo().tel||'').replace(/\D/g,''); return d.length<6?'':waNum(helpInfo().tel); }
 function openSOS(){
   const h=helpInfo();
@@ -1321,7 +1321,7 @@ function openSOS(){
 function sosStep(k){
   const h=helpInfo(); const label=k==='altro'?'Altro':SOS_OPTS.find(o=>o[0]===k)[1]; const altro=k==='altro';
   openSheet(`<div class="sheet-h"><button class="btn ghost sm" id="sos-back">‹ Indietro</button><h2>${altro?'Il problema':'Per '+esc(h.name)}</h2><span style="width:70px"></span></div>
-    <div class="sheet-b">${altro?'':`<div class="waprev" style="margin-bottom:12px">❗ ${esc(label)}</div>`}
+    <div class="sheet-b">${altro?'':`<div class="waprev" style="margin-bottom:12px">${esc(label)}</div>`}
       <div class="field" style="margin:0"><label>${altro?'Cosa succede?':'Vuoi aggiungere qualcosa? (facoltativo)'}</label>
       <textarea class="input" id="sos-extra" rows="${altro?5:3}" placeholder="${altro?'Scrivi qui il problema':'es. la cliente è Laura Rossi, martedì alle 10'}"></textarea></div>
       <div class="small muted" style="margin-top:8px">Aggiungo da solo pagina, dispositivo e ora, così ${esc(h.name)} capisce subito.</div></div>
@@ -1332,8 +1332,8 @@ function sosStep(k){
   if(altro) setTimeout(()=>$('#sos-extra').focus(),250);
 }
 /* ============ MESSAGGI WHATSAPP (conferma + promemoria) ============ */
-const MSG_DEF={conf:"Ciao {nome}!\nTi confermo l'appuntamento {quando} alle {ora} per:\n{servizi}\n\n📍 {indirizzo}\n\nA presto!\n\nOrocorvino Parrucchiere\nMaria",
-  rem:"Ciao {nome}!\nTi ricordo l'appuntamento {quando} alle {ora} per:\n{servizi}\n\n📍 {indirizzo}\n\nSe hai un imprevisto avvisami, grazie!\n\nOrocorvino Parrucchiere\nMaria"};
+const MSG_DEF={conf:"Ciao {nome}!\nTi confermo l'appuntamento {quando} alle {ora} per:\n{servizi}\n\nIndirizzo: {indirizzo}\n\nA presto!\n\nOrocorvino Parrucchiere\nMaria",
+  rem:"Ciao {nome}!\nTi ricordo l'appuntamento {quando} alle {ora} per:\n{servizi}\n\nIndirizzo: {indirizzo}\n\nSe hai un imprevisto avvisami, grazie!\n\nOrocorvino Parrucchiere\nMaria"};
 function addrMsg(){ const a=(S().salon&&S().salon.addr)||''; return a?a+'\nhttps://maps.google.com/?q='+encodeURIComponent(a.replace(/,/g,' ').replace(/\s+/g,' ').trim()).replace(/%20/g,'+'):''; }
 function msgCfg(){ const m=S().msg||{}; return {ask:m.ask!==false,conf:m.conf||MSG_DEF.conf,rem:m.rem||MSG_DEF.rem}; }
 function waNum(p){ const s=String(p||'').trim(); let d=s.replace(/\D/g,''); if(s.startsWith('00')) d=d.slice(2); if(/^(\+|00)/.test(s)) return d; if(d.startsWith('39')&&d.length>=11) return d; return '39'+d; }
