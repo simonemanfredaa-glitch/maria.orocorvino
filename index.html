@@ -1301,15 +1301,17 @@ function openSOS(){
   toast(`Apro WhatsApp con ${h.name}…`);
 }
 /* ============ MESSAGGI WHATSAPP (conferma + promemoria) ============ */
-const MSG_DEF={conf:"Ciao {nome}! Ti confermo l'appuntamento {quando} alle {ora} ({servizio}). A presto!\nMaria – Salone Orocorvino",
-  rem:"Ciao {nome}, ti ricordo l'appuntamento {quando} alle {ora}. Se hai un imprevisto avvisami, grazie!\nMaria – Salone Orocorvino"};
+const MSG_DEF={conf:"Ciao {nome}!\nTi confermo l'appuntamento {quando} alle {ora} per:\n{servizi}\n\n📍 {indirizzo}\n\nA presto!\n\nOrocorvino Parrucchiere\nMaria",
+  rem:"Ciao {nome}, ti ricordo l'appuntamento {quando} alle {ora}. Se hai un imprevisto avvisami, grazie!\n\n📍 {indirizzo}\n\nOrocorvino Parrucchiere\nMaria"};
+function addrMsg(){ const a=(S().salon&&S().salon.addr)||''; return a?a+'\nhttps://maps.google.com/?q='+encodeURIComponent(a.replace(/,/g,' ').replace(/\s+/g,' ').trim()).replace(/%20/g,'+'):''; }
 function msgCfg(){ const m=S().msg||{}; return {ask:m.ask!==false,conf:m.conf||MSG_DEF.conf,rem:m.rem||MSG_DEF.rem}; }
 function waNum(p){ const s=String(p||'').trim(); let d=s.replace(/\D/g,''); if(s.startsWith('00')) d=d.slice(2); if(/^(\+|00)/.test(s)) return d; if(d.startsWith('39')&&d.length>=11) return d; return '39'+d; }
 function hasPhone(c){ return c && String(c.phone||'').replace(/\D/g,'').length>=6; }
 function quando(date){ if(date===TODAY) return 'oggi'; if(date===ymd(addDays(parse(TODAY),1))) return 'domani'; const dt=parse(date); return GIORNI[dt.getDay()].toLowerCase()+' '+dt.getDate()+' '+MESI[dt.getMonth()]; }
 function fillMsg(tpl,a,o={}){ const c=cli(a.clientId)||{name:''}; const nome=o.nome||(c.name||'').trim().split(/\s+/)[0]||'';
   const sv=o.servizio||(a.services||[]).map(x=>svc(x).name).join(' + ').toLowerCase();
-  return tpl.replace(/\{nome\}/g,nome).replace(/\{quando\}/g,quando(a.date)).replace(/\{ora\}/g,hm(a.start)).replace(/\{servizio\}/g,sv); }
+  const list=o.servizi||(a.services||[]).map(x=>'• '+svc(x).name).join('\n');
+  return tpl.replace(/\{servizi\}/g,list).replace(/\{indirizzo\}/g,addrMsg()).replace(/\{nome\}/g,nome).replace(/\{quando\}/g,quando(a.date)).replace(/\{ora\}/g,hm(a.start)).replace(/\{servizio\}/g,sv); }
 function waOpen(num,text){ const l=document.createElement('a'); l.href=`https://wa.me/${num}?text=${encodeURIComponent(text)}`; l.target='_blank'; l.rel='noopener'; document.body.appendChild(l); l.click(); l.remove(); }
 function sendWA(id,kind){ const a=DB.appts.find(x=>x.id===id); if(!a) return; const c=cli(a.clientId);
   if(!hasPhone(c)){ toast('Manca il numero di telefono'); return; }
@@ -2009,9 +2011,9 @@ function renderImpostazioni(){
      <div class="card set-card"><div class="sectitle" style="display:flex">Chiusure e ferie<span class="grow"></span><button class="li-add" data-act="clos-add">+ Aggiungi</button></div>${fer}<div class="small muted" style="margin-top:8px">In agenda questi giorni appaiono come chiusi, ma puoi comunque inserire un appuntamento.</div></div>
      <div class="card set-card"><div class="sectitle" style="display:flex">Messaggi WhatsApp<span class="grow"></span><button class="li-add" data-act="msg-reset">Testi originali</button></div>
        <div class="set-row" style="border:0;padding-top:0"><div class="grow small muted">Dopo aver salvato un appuntamento, propone di mandare la conferma.</div>${tgl(msgCfg().ask,'msg-ask')}</div>
-       <div class="tplhint">Si compilano da soli: <code>{nome}</code> <code>{quando}</code> <code>{ora}</code> <code>{servizio}</code>. Il promemoria si manda dalla voce verde “Promemoria domani” in Agenda.</div>
-       <div class="field"><label>Conferma appuntamento</label><textarea class="input" rows="3" data-msg="conf">${esc(msgCfg().conf)}</textarea></div>
-       <div class="field"><label>Promemoria del giorno prima</label><textarea class="input" rows="3" data-msg="rem">${esc(msgCfg().rem)}</textarea></div>
+       <div class="tplhint">Si compilano da soli: <code>{nome}</code> <code>{quando}</code> <code>{ora}</code> <code>{servizi}</code> (elenco) <code>{servizio}</code> (in una riga) <code>{indirizzo}</code> (con link alla mappa). Il promemoria si manda dalla voce verde “Promemoria domani” in Agenda.</div>
+       <div class="field"><label>Conferma appuntamento</label><textarea class="input" rows="9" data-msg="conf">${esc(msgCfg().conf)}</textarea></div>
+       <div class="field"><label>Promemoria del giorno prima</label><textarea class="input" rows="7" data-msg="rem">${esc(msgCfg().rem)}</textarea></div>
        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" data-act="msg-test" data-k="conf">Prova conferma su di me</button><button class="btn sm" data-act="msg-test" data-k="rem">Prova promemoria su di me</button></div>
        <div class="small muted" style="margin-top:8px">“Su di me” = arriva al numero SOS (${esc(helpInfo().name)}).</div></div></div>
   </div>`;
@@ -2086,7 +2088,7 @@ document.addEventListener('click',e=>{
     case 'msg-ask': { S().msg={...(S().msg||{}),ask:!msgCfg().ask}; save(); render(); break; }
     case 'msg-reset': { S().msg={ask:msgCfg().ask}; save(); render(); toast('Testi ripristinati'); break; }
     case 'msg-test': { const h=helpInfo(); if(String(h.tel).replace(/\D/g,'').length<6){ toast('Inserisci prima il numero nella sezione SOS'); break; }
-      const demo={clientId:null,date:ymd(addDays(parse(TODAY),1)),start:630,services:[]}; const txt=fillMsg(t.dataset.k==='rem'?msgCfg().rem:msgCfg().conf,demo,{nome:h.name,servizio:'taglio e piega'});
+      const demo={clientId:null,date:ymd(addDays(parse(TODAY),1)),start:630,services:[]}; const txt=fillMsg(t.dataset.k==='rem'?msgCfg().rem:msgCfg().conf,demo,{nome:h.name,servizio:'taglio e piega',servizi:'• Taglio\n• Piega'});
       waOpen(waNum(h.tel),txt); break; }
     case 'sync-now': toast('Aggiorno…'); syncFlush().then(()=>syncPull({force:true})).then(ok=>{ if(ok) toast('Dati aggiornati'); }); break;
     case 'sync-off': confirmBox('Scollegare questo dispositivo?<div class="small muted" style="font-weight:400;margin-top:6px">I dati sul foglio restano. Questo dispositivo smette di aggiornarsi.</div>','Scollega',()=>{ closeSheet(); syncDisconnect(); toast('Dispositivo scollegato'); }); break;
