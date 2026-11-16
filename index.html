@@ -981,7 +981,7 @@ try{ DB=JSON.parse(localStorage.getItem(STORE)); }catch(e){}
 if(!DB||DB.v!==5) DB=seed();
 const save=()=>{ try{ localStorage.setItem(STORE,JSON.stringify(DB)); }catch(e){} try{ syncOnSave(); }catch(e){} };
 /* ============ COLLEGAMENTO DATI (Google Sheet) ============ */
-const SYNC_K='orocorvino-sync', SYNC_URL_DEFAULT='';
+const SYNC_K='orocorvino-sync', SYNC_URL_DEFAULT='https://script.google.com/macros/s/AKfycbwCskDhsu15wfKG3v0G4j-2UnCYAbGPgfhRn2sMqjWqXXQZQzDIlMRcrruCJ2mLH0neiQ/exec';
 const SYNC_COLS=['clients','appts','services','products','sales'];
 const SY={cfg:null,snap:null,queue:[],seq:0,state:'off',busy:false,t:null,lastPull:0,err:''};
 (function(){ try{ const o=JSON.parse(localStorage.getItem(SYNC_K))||{}; SY.cfg=o.cfg||null; SY.snap=o.snap||null; SY.queue=o.queue||[]; SY.seq=o.seq||0; SY.lastPull=o.lastPull||0; }catch(e){} })();
