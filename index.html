@@ -153,6 +153,8 @@ textarea.input{height:auto;min-height:80px;padding:12px 14px;resize:vertical;lin
 .warow .wt{font-weight:700;font-variant-numeric:tabular-nums;min-width:48px}
 @media (max-width:760px),(max-height:500px){.strip .schip.wa{order:-1}}
 .sosopt{display:flex;align-items:center;width:100%;text-align:left;gap:10px;min-height:52px;padding:10px 14px;margin-bottom:8px;border:1px solid var(--line);border-radius:12px;background:#fff;font-size:15.5px;font-weight:500;color:var(--ink)}
+.sosopt.ft{flex-wrap:wrap;background:#F1FAF4;border-color:#BFE3CC;color:#1F7A4D;row-gap:0}.sosopt.ft b{flex:1 1 70%}.sosopt.ft small{order:3;flex-basis:100%;color:var(--ink2);font-size:13px;font-weight:400}.sosopt.ft span{order:2}
+.ftsteps{margin:0 0 12px;padding-left:22px;line-height:1.5;font-size:15px}.ftsteps li{margin-bottom:6px}
 .sosopt span{margin-left:auto;color:var(--ink2);font-size:20px}.sosopt:active{background:#F1FAF4}
 .btn.wa{background:#1F9D55;border-color:#1F9D55;color:#fff}.btn.wa.sent{background:#fff;color:#1F7A4D;border-color:#BFE3CC}
 .waprev{background:#E7F7EC;border-radius:12px 12px 12px 4px;padding:12px 14px;font-size:15px;line-height:1.4;white-space:pre-wrap;color:#1b2b22}
@@ -1294,7 +1296,7 @@ function renderAgenda(){
 }
 
 /* ============ SHEET ============ */
-function helpInfo(){ const h=S().help||{}; return {name:h.name||'Simone',tel:h.tel||''}; }
+function helpInfo(){ const h=S().help||{}; return {name:h.name||'Simone',tel:h.tel||'',ft:h.ft||''}; }
 const VIEWNAME={agenda:'Agenda',clienti:'Clienti',listino:'Listino',magazzino:'Magazzino',incassi:'Incassi',impostazioni:'Impostazioni'};
 const SOS_OPTS=[
   ['agenda','Non riesco a mettere o spostare un appuntamento'],
@@ -1317,9 +1319,22 @@ function openSOS(){
   if(!sosNum()){ openSheet(`<div class="sheet-h"><button class="btn ghost sm" data-act="close">Chiudi</button><h2>Serve aiuto?</h2><span style="width:70px"></span></div>
     <div class="sheet-b"><div class="note-chip info">Manca il numero di ${esc(h.name)}. Inseriscilo in <b>Impostazioni → SOS</b>.</div></div>`,'md'); return; }
   openSheet(`<div class="sheet-h"><button class="btn ghost sm" data-act="close">Chiudi</button><h2>Cosa succede?</h2><span style="width:70px"></span></div>
-    <div class="sheet-b"><div class="small muted" style="margin-bottom:8px">Tocca il problema: preparo il messaggio per ${esc(h.name)}.</div>
+    <div class="sheet-b"><button class="sosopt ft" id="sos-ft"><b>Videochiamata FaceTime</b><small>${esc(h.name)} vede il tuo schermo e ti guida</small><span>›</span></button>
+    <div class="small muted" style="margin:14px 0 8px">Oppure tocca il problema: preparo il messaggio per ${esc(h.name)}.</div>
     ${SOS_OPTS.map(([k,l])=>`<button class="sosopt" data-sos="${k}">${esc(l)}<span>›</span></button>`).join('')}</div>`,'md');
   document.querySelectorAll('[data-sos]').forEach(b=>b.onclick=()=>sosStep(b.dataset.sos));
+  $('#sos-ft').onclick=sosFaceTime;
+}
+function ftTarget(){ const h=helpInfo(); const f=String(h.ft||'').trim(); if(f.includes('@')) return f; const n=sosNum(); return f?waNum(f):n; }
+function sosFaceTime(){
+  const h=helpInfo();
+  openSheet(`<div class="sheet-h"><button class="btn ghost sm" id="ft-back">‹ Indietro</button><h2>FaceTime</h2><span style="width:70px"></span></div>
+    <div class="sheet-b"><div style="font-weight:600;margin-bottom:10px">Quando ${esc(h.name)} risponde, per fargli vedere lo schermo:</div>
+      <ol class="ftsteps"><li>Tocca lo schermo: compaiono i tasti della chiamata in alto.</li><li>Tocca il tasto <b>Condividi</b> (un rettangolo con una persona dentro).</li><li>Tocca <b>Condividi il mio schermo</b>, poi torna nel gestionale.</li><li>Per smettere: tocca il tasto viola in alto a sinistra.</li></ol>
+      <div class="small muted">Se non vuoi farti vedere, puoi spegnere la fotocamera: lo schermo si condivide lo stesso.</div></div>
+    <div class="sheet-f"><button class="btn wa grow" id="ft-call" style="height:48px">Chiama ${esc(h.name)}</button></div>`,'md');
+  $('#ft-back').onclick=openSOS;
+  $('#ft-call').onclick=()=>{ const t=ftTarget(); const l=document.createElement('a'); l.href='facetime:'+(t.includes('@')?t:'+'+t); document.body.appendChild(l); l.click(); l.remove(); };
 }
 function sosStep(k){
   const h=helpInfo(); const label=k==='altro'?'Altro':SOS_OPTS.find(o=>o[0]===k)[1]; const altro=k==='altro';
@@ -2025,7 +2040,7 @@ function renderImpostazioni(){
   const hours=[1,2,3,4,5,6,0].map(dw=>{ const h=st.hours[dw]; return `<div class="set-row"><span class="set-day">${GIORNI[dw]}</span>${tgl(h.open,'h-open',`data-d="${dw}"`)}${h.open?`<select class="input sm" data-hf="${dw}">${timeOpts(h.from,300,1380)}</select><span class="muted">–</span><select class="input sm" data-ht="${dw}">${timeOpts(h.to,300,1380)}</select>`:'<span class="muted grow">Chiuso</span>'}</div>`; }).join('');
   const fer=[...st.closures].sort((a,b)=>a.from.localeCompare(b.from)).map(c=>`<div class="set-row"><span class="legend"><i></i></span><div class="grow"><b>${esc(c.title)}</b><div class="small muted">${fmtDate(c.from)} – ${fmtDate(c.to)}</div></div><button class="btn sm ghost" data-act="clos-rm" data-id="${c.id}" style="color:var(--danger)">Togli</button></div>`).join('')||'<div class="small muted">Nessuna chiusura programmata.</div>';
   $('#content').innerHTML=`<div class="set-grid">
-   <div class="set-col"><div class="card set-card"><div class="sectitle">SOS · a chi scrivere se c'è un problema</div><div class="small muted" style="margin:-4px 0 10px">Il tasto SOS fa scegliere il problema e apre WhatsApp con il messaggio già pronto. Da lì si può anche chiamare.</div><div class="row keep"><div class="field"><label>Nome</label><input class="input" data-help="name" value="${esc(helpInfo().name)}"></div><div class="field"><label>Cellulare</label><input class="input" data-help="tel" inputmode="tel" value="${esc(helpInfo().tel)}" placeholder="es. 333 1234567"></div></div><button class="btn sm" data-act="sos" style="margin-top:4px">Prova il tasto SOS</button></div>
+   <div class="set-col"><div class="card set-card"><div class="sectitle">SOS · a chi scrivere se c'è un problema</div><div class="small muted" style="margin:-4px 0 10px">Il tasto SOS fa partire una videochiamata FaceTime (con condivisione schermo) oppure un messaggio WhatsApp già pronto.</div><div class="row keep"><div class="field"><label>Nome</label><input class="input" data-help="name" value="${esc(helpInfo().name)}"></div><div class="field"><label>Cellulare</label><input class="input" data-help="tel" inputmode="tel" value="${esc(helpInfo().tel)}" placeholder="es. 333 1234567"></div></div><div class="field"><label>FaceTime (facoltativo)</label><input class="input" data-help="ft" value="${esc(helpInfo().ft)}" placeholder="Se diverso dal cellulare: numero o email Apple" autocapitalize="off"></div><button class="btn sm" data-act="sos" style="margin-top:4px">Prova il tasto SOS</button></div>
      <div class="card set-card"><div class="sectitle">Collegamento dati</div>
      <div class="syncinfo" id="syncinfo">${syncLabel()}</div>
      ${syncOn()?`<div class="small muted" style="margin:8px 0 12px">iPad e telefono leggono e salvano sullo stesso foglio Google. Ogni sera viene fatta una copia di sicurezza.</div>
