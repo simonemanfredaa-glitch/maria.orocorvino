@@ -770,6 +770,14 @@ select.input:disabled{opacity:.6}
 .brand.logo.mono{width:54px;height:54px;margin:4px 0 16px;border-radius:50%;overflow:hidden}
 .brand.logo.mono svg{width:100%;height:100%;display:block}
 @media (max-height:500px){ .brand.logo.mono{width:40px;height:40px;margin:0 0 6px} }
+
+/* ---- collegamento dati v2.0 ---- */
+.syncinfo{display:flex;align-items:center;gap:8px;font-size:14.5px;font-weight:600;line-height:1.4}
+.sdot{width:10px;height:10px;border-radius:50%;background:#B9C2BD;flex:none}
+.sdot.ok{background:#3E9B65}.sdot.pend{background:#D9A43B}.sdot.off{background:#C0533F}
+.nav .setbtn{position:relative}
+body[data-sync=pending] .nav .setbtn::after,body[data-sync=offline] .nav .setbtn::after,body[data-sync=key] .nav .setbtn::after{content:'';position:absolute;top:8px;right:22px;width:9px;height:9px;border-radius:50%;background:#D9A43B;border:2px solid #fff}
+body[data-sync=offline] .nav .setbtn::after,body[data-sync=key] .nav .setbtn::after{background:#C0533F}
 </style>
 </head>
 <body>
@@ -962,7 +970,81 @@ const STORE='orocorvino-proto-v5';
 let DB;
 try{ DB=JSON.parse(localStorage.getItem(STORE)); }catch(e){}
 if(!DB||DB.v!==5) DB=seed();
-const save=()=>{ try{ localStorage.setItem(STORE,JSON.stringify(DB)); }catch(e){} };
+const save=()=>{ try{ localStorage.setItem(STORE,JSON.stringify(DB)); }catch(e){} try{ syncOnSave(); }catch(e){} };
+/* ============ COLLEGAMENTO DATI (Google Sheet) ============ */
+const SYNC_K='orocorvino-sync', SYNC_URL_DEFAULT='';
+const SYNC_COLS=['clients','appts','services','products','sales'];
+const SY={cfg:null,snap:null,queue:[],seq:0,state:'off',busy:false,t:null,lastPull:0,err:''};
+(function(){ try{ const o=JSON.parse(localStorage.getItem(SYNC_K))||{}; SY.cfg=o.cfg||null; SY.snap=o.snap||null; SY.queue=o.queue||[]; SY.seq=o.seq||0; SY.lastPull=o.lastPull||0; }catch(e){} })();
+const syncOn=()=>!!(SY.cfg&&SY.cfg.key&&(SY.cfg.url||SYNC_URL_DEFAULT));
+function syncStore(){ try{ localStorage.setItem(SYNC_K,JSON.stringify({cfg:SY.cfg,snap:SY.snap,queue:SY.queue,seq:SY.seq,lastPull:SY.lastPull})); }catch(e){} }
+function recView(c,r){ try{
+  if(c==='clients') return [r.name||'',r.phone||'',r.birthday?r.birthday.split('-').reverse().join('/'):'',r.note||''];
+  if(c==='appts'){ const cl=r.clientId?cli(r.clientId):null; return [r.date||'',typeof r.start==='number'?hm(r.start):'',cl?cl.name:(r.title||''),(r.services||[]).map(id=>svc(id).name).join(', '),({paid:'Incassato',noshow:'Non venuta'})[r.status]||'Prenotato',r.payment?r.payment.total:'']; }
+  if(c==='services') return [r.name,r.cat,r.dur,r.price,r.active?'Sì':'No'];
+  if(c==='products') return [r.name,r.brand||'',r.sec||'',r.kind==='vendita'?'In vendita':'Uso in salone',r.stock,r.kind==='vendita'?r.price:''];
+  if(c==='sales') return [r.date||'',r.total,r.method||''];
+  if(c==='settings') return [r.salon?r.salon.name:''];
+}catch(e){} return []; }
+function snapOf(){ const s={}; SYNC_COLS.forEach(c=>{ s[c]={}; (DB[c]||[]).forEach(r=>{ if(r&&r.id!=null) s[c][r.id]=JSON.stringify(r); }); }); s.settings={settings:JSON.stringify(DB.settings)}; return s; }
+function syncDiff(){ const cur=snapOf(), old=SY.snap||{};
+  [...SYNC_COLS,'settings'].forEach(c=>{ const a=old[c]||{}, b=cur[c];
+    for(const id in b) if(a[id]!==b[id]) syncEnq({col:c,id,op:'put'});
+    for(const id in a) if(!(id in b)) syncEnq({col:c,id,op:'del'}); });
+  SY.snap=cur; }
+function syncEnq(o){ SY.queue=SY.queue.filter(q=>!(q.col===o.col&&q.id===o.id)); o.seq=++SY.seq; SY.queue.push(o); }
+function syncOnSave(){ if(!syncOn()) return; syncDiff(); syncStore(); syncState(SY.queue.length?'pending':'ok'); clearTimeout(SY.t); SY.t=setTimeout(syncFlush,1200); }
+async function syncCall(body){
+  const r=await fetch(SY.cfg.url||SYNC_URL_DEFAULT,{method:'POST',redirect:'follow',body:JSON.stringify({...body,key:SY.cfg.key})});
+  const j=await r.json(); if(!j.ok) throw new Error(j.err||'errore'); return j; }
+function opPayload(o){ if(o.op==='del') return {col:o.col,id:o.id,op:'del'};
+  const rec=o.col==='settings'?DB.settings:(DB[o.col]||[]).find(r=>String(r.id)===String(o.id));
+  return rec?{col:o.col,id:o.id,op:'put',rec,view:recView(o.col,rec)}:{col:o.col,id:o.id,op:'del'}; }
+async function syncFlush(){
+  if(!syncOn()||SY.busy||!SY.queue.length) return;
+  SY.busy=true;
+  try{ while(SY.queue.length){
+      const batch=SY.queue.slice(0,250), top=batch[batch.length-1].seq;
+      await syncCall({action:'push',ops:batch.map(opPayload)});
+      SY.queue=SY.queue.filter(q=>q.seq>top || !batch.find(b=>b.seq===q.seq)); syncStore(); }
+    SY.err=''; syncState('ok');
+  }catch(e){ SY.err=String(e.message||e); syncState(e.message==='chiave'?'key':'offline'); clearTimeout(SY.t); SY.t=setTimeout(syncFlush,30000); }
+  finally{ SY.busy=false; }
+}
+async function syncPull(opts={}){
+  if(!syncOn()) return;
+  if(SY.queue.length){ await syncFlush(); if(SY.queue.length) return; }
+  if($('#overlay')?.classList.contains('show') && !opts.force) return;
+  try{
+    const j=await syncCall({action:'pull'}); const d=j.data||{};
+    const empty=SYNC_COLS.every(c=>!(d[c]||[]).length) && !(d.settings||[]).length;
+    if(empty){ if(opts.onEmpty) return opts.onEmpty(); return; }
+    SYNC_COLS.forEach(c=>{ DB[c]=d[c]||[]; });
+    if(d.settings&&d.settings[0]) DB.settings=d.settings[0];
+    DB.v=5; SY.snap=snapOf(); SY.lastPull=Date.now(); syncStore();
+    try{ localStorage.setItem(STORE,JSON.stringify(DB)); }catch(e){}
+    SY.err=''; syncState('ok'); if(!opts.silent) render();
+    return true;
+  }catch(e){ SY.err=String(e.message||e); syncState(e.message==='chiave'?'key':'offline'); }
+}
+function syncState(s){ SY.state=s; document.body.dataset.sync=s; const el=$('#syncinfo'); if(el) el.innerHTML=syncLabel(); }
+function syncLabel(){ const t=SY.lastPull?new Date(SY.lastPull).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}):'—';
+  return ({ok:`<span class="sdot ok"></span>Collegato · ultimo aggiornamento ${t}`,pending:`<span class="sdot pend"></span>Sto salvando ${SY.queue.length} modifiche…`,
+    offline:`<span class="sdot off"></span>Senza connessione: le modifiche partono appena torna internet${SY.queue.length?` (${SY.queue.length} in attesa)`:''}`,
+    key:`<span class="sdot off"></span>Chiave non valida: controlla la chiave`,off:`<span class="sdot"></span>Non collegato: i dati restano solo su questo dispositivo`})[SY.state]||''; }
+async function syncConnect(url,key){
+  SY.cfg={url:url.trim(),key:key.trim()};
+  try{ await syncCall({action:'ping'}); }catch(e){ const m=e.message==='chiave'?'Chiave sbagliata':'Indirizzo non raggiungibile'; SY.cfg=null; syncStore(); toast(m); return false; }
+  syncStore();
+  const got=await syncPull({force:true,onEmpty:async()=>{ SY.snap={}; syncDiff(); syncStore(); syncState('pending'); await syncFlush(); SY.lastPull=Date.now(); syncStore(); toast('Dati di questo dispositivo copiati sul foglio'); }});
+  if(got) toast('Collegato: dati scaricati dal foglio');
+  render(); return true;
+}
+function syncDisconnect(){ SY.cfg=null; SY.queue=[]; SY.snap=null; syncStore(); syncState('off'); render(); }
+addEventListener('online',()=>{ syncFlush(); });
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'&&Date.now()-SY.lastPull>15000) syncPull(); });
+setInterval(()=>{ if(document.visibilityState==='visible'&&Date.now()-SY.lastPull>90000) syncPull(); },30000);
+
 const ui={ pmode:'day', sel:null, view:'agenda', mode: (isPhone()&&!isShort())?'day':'week', date: (()=>{const d=new Date(); d.setHours(0,0,0,0); return d;})(),
   client:null, clientQ:'', clientF:'Tutte', clientSort:'az', clientMobileDetail:false, techEdit:false,
   magSec:'Tutto', magShow:'Tutti', magQ:'',
@@ -980,7 +1062,7 @@ function renderNav(){
   document.body.dataset.logo='c';
   $('#nav').innerHTML = `<div class="brand logo mono" title="${esc(S().salon.name)}"><svg viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="100" fill="#3F6B56"/><image href="data:image/png;base64,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" x="52.2" y="53.2" width="80" height="101.2"/></svg></div>`+
     items.map(([k,l])=>`<button data-act="view" data-v="${k}" class="${ui.view===k?'on':''}">${ICONS[k]}${l}${k==='magazzino'&&low?`<span class="badge">${low}</span>`:''}</button>`).join('')+
-    `<div class="spacer"></div><button class="${ui.view==='impostazioni'?'on':''}" data-act="view" data-v="impostazioni">${ICONS.gear}Impostaz.</button><button class="sosbtn" data-act="sos" aria-label="SOS: scrivi su WhatsApp">SOS</button>`;
+    `<div class="spacer"></div><button class="setbtn ${ui.view==='impostazioni'?'on':''}" data-act="view" data-v="impostazioni">${ICONS.gear}Impostaz.</button><button class="sosbtn" data-act="sos" aria-label="SOS: scrivi su WhatsApp">SOS</button>`;
 }
 
 /* ============ AGENDA ============ */
@@ -1863,6 +1945,14 @@ function renderImpostazioni(){
   const fer=[...st.closures].sort((a,b)=>a.from.localeCompare(b.from)).map(c=>`<div class="set-row"><span class="legend"><i></i></span><div class="grow"><b>${esc(c.title)}</b><div class="small muted">${fmtDate(c.from)} – ${fmtDate(c.to)}</div></div><button class="btn sm ghost" data-act="clos-rm" data-id="${c.id}" style="color:var(--danger)">Togli</button></div>`).join('')||'<div class="small muted">Nessuna chiusura programmata.</div>';
   $('#content').innerHTML=`<div class="set-grid">
    <div class="set-col"><div class="card set-card"><div class="sectitle">SOS · a chi scrivere se c'è un problema</div><div class="small muted" style="margin:-4px 0 10px">Il tasto SOS apre WhatsApp con un messaggio già pronto. Da lì si può anche chiamare.</div><div class="row keep"><div class="field"><label>Nome</label><input class="input" data-help="name" value="${esc(helpInfo().name)}"></div><div class="field"><label>Cellulare</label><input class="input" data-help="tel" inputmode="tel" value="${esc(helpInfo().tel)}" placeholder="es. 333 1234567"></div></div><button class="btn sm" data-act="sos" style="margin-top:4px">Prova: apre WhatsApp</button></div>
+     <div class="card set-card"><div class="sectitle">Collegamento dati</div>
+     <div class="syncinfo" id="syncinfo">${syncLabel()}</div>
+     ${syncOn()?`<div class="small muted" style="margin:8px 0 12px">iPad e telefono leggono e salvano sullo stesso foglio Google. Ogni sera viene fatta una copia di sicurezza.</div>
+       <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" data-act="sync-now">Aggiorna ora</button><button class="btn ghost sm" data-act="sync-off" style="color:var(--danger)">Scollega questo dispositivo</button></div>`
+     :`<div class="small muted" style="margin:8px 0 12px">Inserisci la chiave per usare gli stessi dati su iPad e telefono.</div>
+       ${SYNC_URL_DEFAULT?'':`<div class="field"><label>Indirizzo del foglio (URL app web)</label><input class="input" id="sy-url" placeholder="https://script.google.com/macros/s/…/exec" autocapitalize="off" autocorrect="off"></div>`}
+       <div class="field"><label>Chiave</label><input class="input" id="sy-key" placeholder="salone-XXXX-XXXX-XXXX" autocapitalize="characters" autocorrect="off" spellcheck="false"></div>
+       <button class="btn primary sm" data-act="sync-connect" style="margin-top:4px">Collega</button>`}</div>
      <div class="card set-card"><div class="sectitle">Dati del salone</div><div class="field"><label>Nome</label><input class="input" data-salon="name" value="${esc(st.salon.name)}"></div><div class="field"><label>Indirizzo</label><input class="input" data-salon="addr" value="${esc(st.salon.addr)}"></div><div class="field" style="margin:0"><label>Telefono</label><input class="input" data-salon="tel" value="${esc(st.salon.tel)}" placeholder="Da inserire"></div></div>
      <div class="card set-card"><div class="sectitle">Codice di accesso</div><div class="set-row" style="border:0"><div class="grow small muted">Chiede un PIN di 4 cifre all'apertura e dopo 10 minuti senza usare l'app.</div>${tgl(st.pin.on,'pin-on')}</div><div class="set-row" style="border:0"><span class="pin-dots">${'<i></i>'.repeat(4)}</span><span class="grow"></span><button class="btn sm" data-act="pin-change">Cambia PIN</button><button class="btn sm ghost" data-act="lock-now">Blocca ora</button></div></div>
      <div class="card set-card"><div class="sectitle">IVA e prezzi</div>
@@ -1906,6 +1996,7 @@ setInterval(()=>{ if(S().pin.on && unlocked && Date.now()-lastAct>10*60*1000){ u
 /* ============ ROUTER ============ */
 function render(){
   syncCats();
+  const pb=document.querySelector('.proto'); if(pb) pb.style.display=syncOn()?'none':'';
   document.body.classList.toggle('stack',isStack()); document.body.classList.toggle('tport',!isPhone()&&isStack());
   $('#topbar').classList.remove('agenda-top','phone-top');
   renderNav(); if(ui.sel && !DB.appts.find(a=>a.id===ui.sel)) ui.sel=null; renderAgenda._keep = renderAgenda._keep || (ui.view==='agenda' && !!$('#calbody'));
@@ -1937,6 +2028,9 @@ document.addEventListener('click',e=>{
     case 'wk-sl': case 'wk-sr': { const cb=$('#calbody'); const cw=parseFloat(getComputedStyle($('.cal')).getPropertyValue('--cw'))||100; cb.scrollBy({left:(A==='wk-sr'?1:-1)*cw,behavior:'smooth'}); break; }
     case 'set-wkm': S().wkClosed=t.dataset.m; save(); render(); break;
     case 'sos': openSOS(); break;
+    case 'sync-now': toast('Aggiorno…'); syncFlush().then(()=>syncPull({force:true})).then(ok=>{ if(ok) toast('Dati aggiornati'); }); break;
+    case 'sync-off': confirmBox('Scollegare questo dispositivo?<div class="small muted" style="font-weight:400;margin-top:6px">I dati sul foglio restano. Questo dispositivo smette di aggiornarsi.</div>','Scollega',()=>{ closeSheet(); syncDisconnect(); toast('Dispositivo scollegato'); }); break;
+    case 'sync-connect': { const u=$('#sy-url')?$('#sy-url').value:SYNC_URL_DEFAULT, k=$('#sy-key').value; if(!u||!k){ toast('Inserisci indirizzo e chiave'); break; } t.disabled=true; t.textContent='Collego…'; syncConnect(u,k).finally(()=>{ t.disabled=false; t.textContent='Collega'; }); break; }
     case 'cat-edit': catSheet(t.dataset.cat||null); break;
     case 'goto-day': ui.date=parse(t.dataset.d); ui.mode='day'; renderAgenda._keep=false; render(); break;
     case 'new-appt': newDraft(); break;
@@ -2022,6 +2116,7 @@ addEventListener('resize',()=>{ const k=layoutKey(); if(lastP!==k){ lastP=k; if(
 setInterval(()=>{ if(ui.view==='agenda' && !$('#overlay').classList.contains('show')){ const st=$('#calbody')?.scrollTop; renderAgenda(); if(st!=null&&$('#calbody')) $('#calbody').scrollTop=st; } },60000);
 render();
 if(S().pin.on) showLock(); else unlocked=true;
+if(syncOn()){ syncState(SY.queue.length?'pending':'ok'); syncFlush().then(()=>syncPull()); } else syncState('off');
 
 </script>
 </body>
