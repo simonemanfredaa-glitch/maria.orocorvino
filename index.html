@@ -1306,7 +1306,7 @@ const SOS_OPTS=[
 function sosDevice(){ const u=navigator.userAgent; const ipad=/iPad/.test(u)||(/Macintosh/.test(u)&&navigator.maxTouchPoints>1);
   const d=ipad?'iPad':/iPhone/.test(u)?'iPhone':/Android/.test(u)?'Android':'computer'; return d+(innerWidth>innerHeight?' orizzontale':' verticale'); }
 function sosText(label,extra){ const h=helpInfo(); const now=new Date();
-  return `Ciao ${h.name}, ho un problema con il gestionale.\n\nProblema: ${label}`+(extra?`\n\n${extra}`:'')+
+  return `Ciao ${h.name}, ho un problema con il gestionale.\n\n${label}`+(extra?`\n\n${extra}`:'')+
     `\n\n(Dettagli tecnici: pagina ${VIEWNAME[ui.view]||ui.view}, ${sosDevice()}, ${now.toLocaleDateString('it-IT')} ore ${now.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}, `+(syncOn()?'dati collegati al foglio Google':'dati NON collegati al foglio Google')+')'; }
 function sosNum(){ const d=String(helpInfo().tel||'').replace(/\D/g,''); return d.length<6?'':waNum(helpInfo().tel); }
 function openSOS(){
