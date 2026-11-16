@@ -148,6 +148,13 @@ textarea.input{height:auto;min-height:80px;padding:12px 14px;resize:vertical;lin
 .strip-l{font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3);margin-right:2px}
 .schip{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 14px;border-radius:18px;background:#fff;border:1px solid var(--line);font-size:13.5px;color:var(--ink2)}
 .schip b{color:var(--ink);font-size:14.5px}
+.schip.wa{border-color:#BFE3CC;background:#F1FAF4;color:#1F7A4D}.schip.wa b{color:#1F7A4D}.schip.wa.done{background:#fff;border-color:var(--line);color:var(--ink3,#888)}
+.warow{display:flex;align-items:center;gap:12px;padding:12px 2px;border-bottom:1px solid var(--line)}.warow:last-child{border-bottom:0}
+.warow .wt{font-weight:700;font-variant-numeric:tabular-nums;min-width:48px}
+@media (max-width:760px),(max-height:500px){.strip .schip.wa{order:-1}}
+.btn.wa{background:#1F9D55;border-color:#1F9D55;color:#fff}.btn.wa.sent{background:#fff;color:#1F7A4D;border-color:#BFE3CC}
+.waprev{background:#E7F7EC;border-radius:12px 12px 12px 4px;padding:12px 14px;font-size:15px;line-height:1.4;white-space:pre-wrap;color:#1b2b22}
+.tplhint{font-size:12.5px;color:var(--ink2);margin:-2px 0 10px}.tplhint code{background:var(--line2,#eee);border-radius:5px;padding:1px 5px;font-size:12px}
 .schip.warn{background:var(--danger-soft);border-color:#F2D9CF;color:#8E3A20}.schip.warn b{color:#8E3A20}
 .legend{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink2)}
 .legend i{width:14px;height:14px;border-radius:4px;background:var(--closed);border:1px solid #DCE2EA}
@@ -1103,6 +1110,7 @@ function statStrip(extra){
     <button class="schip" data-act="view" data-v="incassi">Incassato <b>${eur(inc)}</b></button>
     <button class="schip" data-act="view" data-v="incassi">Previsto <b>${eur(Math.max(prev,inc))}</b></button>
     <button class="schip hide-phone" data-act="goto-today">Spazi liberi <b>${isOpen(new Date())?freeSlots(TODAY):0}</b></button>
+    ${remChip()}
     ${low?`<button class="schip warn" data-act="view" data-v="magazzino"><span class="hide-phone">Da riordinare</span><span class="only-phone">Riordina</span> <b>${low}</b></button>`:''}
     <span class="grow"></span>${extra||'<span class="legend hide-phone"><i></i>Giorno di chiusura · si può comunque prenotare</span>'}</div>`;
 }
@@ -1292,6 +1300,41 @@ function openSOS(){
   document.body.appendChild(link); link.click(); link.remove();
   toast(`Apro WhatsApp con ${h.name}…`);
 }
+/* ============ MESSAGGI WHATSAPP (conferma + promemoria) ============ */
+const MSG_DEF={conf:"Ciao {nome}! Ti confermo l'appuntamento {quando} alle {ora} ({servizio}). A presto!\nMaria – Salone Orocorvino",
+  rem:"Ciao {nome}, ti ricordo l'appuntamento {quando} alle {ora}. Se hai un imprevisto avvisami, grazie!\nMaria – Salone Orocorvino"};
+function msgCfg(){ const m=S().msg||{}; return {ask:m.ask!==false,conf:m.conf||MSG_DEF.conf,rem:m.rem||MSG_DEF.rem}; }
+function waNum(p){ const s=String(p||'').trim(); let d=s.replace(/\D/g,''); if(s.startsWith('00')) d=d.slice(2); if(/^(\+|00)/.test(s)) return d; if(d.startsWith('39')&&d.length>=11) return d; return '39'+d; }
+function hasPhone(c){ return c && String(c.phone||'').replace(/\D/g,'').length>=6; }
+function quando(date){ if(date===TODAY) return 'oggi'; if(date===ymd(addDays(parse(TODAY),1))) return 'domani'; const dt=parse(date); return GIORNI[dt.getDay()].toLowerCase()+' '+dt.getDate()+' '+MESI[dt.getMonth()]; }
+function fillMsg(tpl,a,o={}){ const c=cli(a.clientId)||{name:''}; const nome=o.nome||(c.name||'').trim().split(/\s+/)[0]||'';
+  const sv=o.servizio||(a.services||[]).map(x=>svc(x).name).join(' + ').toLowerCase();
+  return tpl.replace(/\{nome\}/g,nome).replace(/\{quando\}/g,quando(a.date)).replace(/\{ora\}/g,hm(a.start)).replace(/\{servizio\}/g,sv); }
+function waOpen(num,text){ const l=document.createElement('a'); l.href=`https://wa.me/${num}?text=${encodeURIComponent(text)}`; l.target='_blank'; l.rel='noopener'; document.body.appendChild(l); l.click(); l.remove(); }
+function sendWA(id,kind){ const a=DB.appts.find(x=>x.id===id); if(!a) return; const c=cli(a.clientId);
+  if(!hasPhone(c)){ toast('Manca il numero di telefono'); return; }
+  waOpen(waNum(c.phone), fillMsg(kind==='rem'?msgCfg().rem:msgCfg().conf, a));
+  a.wa={...(a.wa||{}),[kind]:Date.now()}; save(); }
+function askConfirmMsg(a,changed){
+  const c=cli(a.clientId); if(!msgCfg().ask||!hasPhone(c)||a.date<TODAY) return false;
+  openSheet(`<div class="sheet-h"><span style="width:70px"></span><h2>${changed?'Avvisare del cambio?':'Mandare la conferma?'}</h2><span style="width:70px"></span></div>
+    <div class="sheet-b"><div class="small muted" style="margin-bottom:8px">Messaggio per <b>${esc(c.name)}</b> · si apre WhatsApp, tu premi Invia</div><div class="waprev">${esc(fillMsg(msgCfg().conf,a))}</div></div>
+    <div class="sheet-f"><button class="btn grow" data-act="close">Non ora</button><button class="btn wa grow" id="wa-conf">Apri WhatsApp</button></div>`,'md');
+  $('#wa-conf').onclick=()=>{ sendWA(a.id,'conf'); closeSheet(); render(); };
+  return true; }
+function remDay(){ let d=addDays(parse(TODAY),1); for(let i=0;i<6&&!isOpen(d);i++){ const k=ymd(d); if(DB.appts.some(a=>a.date===k&&a.type==='appt'&&a.status==='booked')) break; d=addDays(d,1);} return ymd(d); }
+function remList(){ const k=remDay(); return DB.appts.filter(a=>a.date===k&&a.type==='appt'&&a.status==='booked').sort((a,b)=>a.start-b.start); }
+function remChip(){ const L=remList(); if(!L.length) return ''; const todo=L.filter(a=>!(a.wa&&a.wa.rem)&&hasPhone(cli(a.clientId))).length;
+  return `<button class="schip wa${todo?'':' done'}" data-act="wa-rem">${todo?`Promemoria ${quando(remDay())} <b>${todo}</b>`:`Promemoria ${quando(remDay())} ✓`}</button>`; }
+function openReminders(){
+  const k=remDay(); const L=remList(); const dt=parse(k);
+  const rows=L.map(a=>{ const c=cli(a.clientId)||{name:'?'}; const sent=a.wa&&a.wa.rem; const ok=hasPhone(c);
+    return `<div class="warow"><span class="wt">${hm(a.start)}</span><div class="grow" style="min-width:0"><div style="font-weight:600">${esc(c.name)}</div><div class="small muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.services.map(x=>esc(svc(x).name)).join(' + ')}</div></div>
+      ${ok?`<button class="btn sm wa${sent?' sent':''}" data-act="wa-send" data-id="${a.id}">${sent?'✓ Inviato':'Invia'}</button>`:'<span class="small muted">Senza numero</span>'}</div>`; }).join('')||'<div class="small muted">Nessun appuntamento.</div>';
+  const todo=L.filter(a=>!(a.wa&&a.wa.rem)&&hasPhone(cli(a.clientId))).length;
+  openSheet(`<div class="sheet-h"><button class="btn ghost sm" data-act="close">Chiudi</button><h2>Promemoria · ${GIORNI[dt.getDay()]} ${dt.getDate()}</h2><span style="width:70px"></span></div>
+    <div class="sheet-b"><div class="small muted" style="margin-bottom:6px">${todo?`Da avvisare: <b>${todo}</b>. Tocca Invia: si apre WhatsApp col messaggio pronto, premi Invia e torna qui.`:'Hai avvisato tutte. 👍'}</div>${rows}</div>`,'md');
+}
 function openSheet(html,cls=''){ const sh=$('#sheet'); sh.className='sheet '+cls; sh.innerHTML=html; $('#overlay').classList.add('show'); }
 function closeSheet(){ $('#overlay').classList.remove('show'); draft=null; pay=null; }
 function toast(t){ const el=$('#toast'); el.textContent=t; el.classList.add('show'); clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove('show'),2200); }
@@ -1452,13 +1495,15 @@ function saveDraft(){
   }
   const base={id:d.id||uid(),type:d.type,date:d.date,start:d.start,dur:d.dur,status:d.status||'booked'};
   if(d.type==='appt'){ Object.assign(base,{clientId:d.clientId,services:d.services,products:d.products||[],note:d.note,payment:d.payment}); } else base.title=d.title;
-  if(d.id){ const i=DB.appts.findIndex(a=>a.id===d.id); DB.appts[i]=base; }
+  let moved=false;
+  if(d.id){ const i=DB.appts.findIndex(a=>a.id===d.id); const old=DB.appts[i]; moved=old.date!==base.date||old.start!==base.start; if(old.wa) base.wa=moved?{}:old.wa; DB.appts[i]=base; }
   else {
     DB.appts.push(base);
     if(d.repeat){ for(let i=1;i<=4;i++){ const nd=ymd(addDays(parse(d.date),7*d.repeat*i)); DB.appts.push({...base,id:uid(),date:nd,products:[]}); } }
   }
   const wasEdit=!!d.id;
   save(); closeSheet(); ui.view='agenda'; ui.date=parse(d.date); if(wasEdit) ui.sel=base.id; render(); toast(wasEdit?'Appuntamento aggiornato':(d.type==='block'?'Blocco inserito':'Appuntamento salvato'));
+  if(base.type==='appt'&&(!wasEdit||moved)) setTimeout(()=>askConfirmMsg(base,wasEdit),350);
 }
 
 /* --- dettaglio appuntamento (telefono / schermi stretti) --- */
@@ -1962,11 +2007,18 @@ function renderImpostazioni(){
      <div class="card set-card"><div class="sectitle">Backup</div><div class="small muted" style="margin-bottom:10px">Nella versione finale: copia settimanale automatica su Google Drive. Per ora puoi copiare i dati.</div><button class="btn sm" data-act="backup-copy">Copia i dati</button></div></div>
    <div class="set-col"><div class="card set-card"><div class="sectitle">Orari di apertura</div>${hours}</div>
      <div class="card set-card"><div class="sectitle" style="display:flex">Chiusure e ferie<span class="grow"></span><button class="li-add" data-act="clos-add">+ Aggiungi</button></div>${fer}<div class="small muted" style="margin-top:8px">In agenda questi giorni appaiono come chiusi, ma puoi comunque inserire un appuntamento.</div></div>
-     <div class="card set-card" style="opacity:.7"><div class="sectitle" style="display:flex;gap:8px">Promemoria WhatsApp <span class="tag bday">In arrivo</span></div><div class="small muted">Il giorno prima, un messaggio pronto da inviare con un tocco: “Ciao Laura, ti aspetto domani alle 10:30”.</div></div></div>
+     <div class="card set-card"><div class="sectitle" style="display:flex">Messaggi WhatsApp<span class="grow"></span><button class="li-add" data-act="msg-reset">Testi originali</button></div>
+       <div class="set-row" style="border:0;padding-top:0"><div class="grow small muted">Dopo aver salvato un appuntamento, propone di mandare la conferma.</div>${tgl(msgCfg().ask,'msg-ask')}</div>
+       <div class="tplhint">Si compilano da soli: <code>{nome}</code> <code>{quando}</code> <code>{ora}</code> <code>{servizio}</code>. Il promemoria si manda dalla voce verde “Promemoria domani” in Agenda.</div>
+       <div class="field"><label>Conferma appuntamento</label><textarea class="input" rows="3" data-msg="conf">${esc(msgCfg().conf)}</textarea></div>
+       <div class="field"><label>Promemoria del giorno prima</label><textarea class="input" rows="3" data-msg="rem">${esc(msgCfg().rem)}</textarea></div>
+       <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" data-act="msg-test" data-k="conf">Prova conferma su di me</button><button class="btn sm" data-act="msg-test" data-k="rem">Prova promemoria su di me</button></div>
+       <div class="small muted" style="margin-top:8px">“Su di me” = arriva al numero SOS (${esc(helpInfo().name)}).</div></div></div>
   </div>`;
   document.querySelectorAll('[data-hf]').forEach(s=>s.onchange=()=>{ st.hours[s.dataset.hf].from=+s.value; save(); toast('Orari aggiornati'); });
   document.querySelectorAll('[data-ht]').forEach(s=>s.onchange=()=>{ st.hours[s.dataset.ht].to=+s.value; save(); toast('Orari aggiornati'); });
   document.querySelectorAll('[data-salon]').forEach(i=>i.onchange=()=>{ st.salon[i.dataset.salon]=i.value; save(); toast('Salvato'); });
+  document.querySelectorAll('[data-msg]').forEach(i=>i.onchange=()=>{ S().msg={...(S().msg||{}),[i.dataset.msg]:i.value.trim()||MSG_DEF[i.dataset.msg]}; save(); toast('Testo salvato'); });
   document.querySelectorAll('[data-help]').forEach(i=>i.onchange=()=>{ st.help=helpInfo(); st.help[i.dataset.help]=i.value.trim(); save(); toast('Salvato'); });
   document.querySelectorAll('[data-set]').forEach(i=>i.onchange=()=>{ const k=i.dataset.set; st[k]=k==='vat'?(num(i.value)||22):i.value; save(); toast('Salvato'); });
 }
@@ -2028,6 +2080,14 @@ document.addEventListener('click',e=>{
     case 'wk-sl': case 'wk-sr': { const cb=$('#calbody'); const cw=parseFloat(getComputedStyle($('.cal')).getPropertyValue('--cw'))||100; cb.scrollBy({left:(A==='wk-sr'?1:-1)*cw,behavior:'smooth'}); break; }
     case 'set-wkm': S().wkClosed=t.dataset.m; save(); render(); break;
     case 'sos': openSOS(); break;
+    case 'wa-rem': openReminders(); break;
+    case 'wa-send': sendWA(t.dataset.id,'rem'); openReminders(); render(); break;
+    case 'wa-conf1': sendWA(t.dataset.id,'conf'); render(); break;
+    case 'msg-ask': { S().msg={...(S().msg||{}),ask:!msgCfg().ask}; save(); render(); break; }
+    case 'msg-reset': { S().msg={ask:msgCfg().ask}; save(); render(); toast('Testi ripristinati'); break; }
+    case 'msg-test': { const h=helpInfo(); if(String(h.tel).replace(/\D/g,'').length<6){ toast('Inserisci prima il numero nella sezione SOS'); break; }
+      const demo={clientId:null,date:ymd(addDays(parse(TODAY),1)),start:630,services:[]}; const txt=fillMsg(t.dataset.k==='rem'?msgCfg().rem:msgCfg().conf,demo,{nome:h.name,servizio:'taglio e piega'});
+      waOpen(waNum(h.tel),txt); break; }
     case 'sync-now': toast('Aggiorno…'); syncFlush().then(()=>syncPull({force:true})).then(ok=>{ if(ok) toast('Dati aggiornati'); }); break;
     case 'sync-off': confirmBox('Scollegare questo dispositivo?<div class="small muted" style="font-weight:400;margin-top:6px">I dati sul foglio restano. Questo dispositivo smette di aggiornarsi.</div>','Scollega',()=>{ closeSheet(); syncDisconnect(); toast('Dispositivo scollegato'); }); break;
     case 'sync-connect': { const u=$('#sy-url')?$('#sy-url').value:SYNC_URL_DEFAULT, k=$('#sy-key').value; if(!u||!k){ toast('Inserisci indirizzo e chiave'); break; } t.disabled=true; t.textContent='Collego…'; syncConnect(u,k).finally(()=>{ t.disabled=false; t.textContent='Collega'; }); break; }
