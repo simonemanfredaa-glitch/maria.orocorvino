@@ -706,6 +706,7 @@ body.stack .half .list-pane{max-height:none}
 .payline input{width:auto}
 .payempty{padding:14px 0 6px;color:var(--ink3);font-size:14px}
 .payadd{padding:8px 0 12px}
+.updbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom));z-index:9999;background:#1F7A4D;color:#fff;border:0;border-radius:24px;padding:12px 20px;font-weight:700;font-size:15px;box-shadow:0 6px 20px rgba(0,0,0,.2)}
 .pickfield{width:100%;min-height:48px;display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:#fff;text-align:left;font-size:15.5px;color:var(--ink3,#999)}
 .pickfield.set{color:var(--ink);font-weight:600}.pickfield span{flex:1}.pickfield b{color:var(--gold);font-size:14px}
 .pk-top{position:sticky;top:-16px;z-index:2;background:var(--bg2,#F6F7F5);margin:-16px -16px 6px;padding:14px 16px 10px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid var(--line)}
@@ -999,6 +1000,19 @@ try{ DB=JSON.parse(localStorage.getItem(STORE)); }catch(e){}
 if(!DB||DB.v!==5) DB=seed();
 const save=()=>{ try{ localStorage.setItem(STORE,JSON.stringify(DB)); }catch(e){} try{ syncOnSave(); }catch(e){} };
 /* ============ COLLEGAMENTO DATI (Google Sheet) ============ */
+/* ---- aggiornamento automatico dell'app ---- */
+const APP_VER='20261117-205703';
+let updWait=false;
+function checkUpdate(){ if(APP_VER==='dev'||!navigator.onLine) return;
+  fetch('version.txt?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(v=>{ v=(v||'').trim(); if(!v||v===APP_VER) return;
+    const busy=$('#overlay')?.classList.contains('show')||(typeof SY!=='undefined'&&SY.queue&&SY.queue.length);
+    const tried=new URLSearchParams(location.search).get('v')===v;
+    if(!busy&&!tried){ location.replace(location.pathname+'?v='+encodeURIComponent(v)); return; }
+    if(!updWait){ updWait=true; const b=document.createElement('button'); b.className='updbar'; b.textContent='Nuova versione disponibile · tocca per aggiornare'; b.onclick=()=>location.replace(location.pathname+'?v='+encodeURIComponent(v)); document.body.appendChild(b); }
+  }).catch(()=>{}); }
+setTimeout(checkUpdate,1500);
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') checkUpdate(); });
+setInterval(checkUpdate,5*60*1000);
 const SYNC_K='orocorvino-sync', SYNC_URL_DEFAULT='https://script.google.com/macros/s/AKfycbwCskDhsu15wfKG3v0G4j-2UnCYAbGPgfhRn2sMqjWqXXQZQzDIlMRcrruCJ2mLH0neiQ/exec';
 const SYNC_COLS=['clients','appts','services','products','sales'];
 const SY={cfg:null,snap:null,queue:[],seq:0,state:'off',busy:false,t:null,lastPull:0,err:''};
@@ -2096,7 +2110,7 @@ function renderImpostazioni(){
   $('#content').innerHTML=`<div class="set-grid">
    <div class="set-col"><div class="card set-card"><div class="sectitle">SOS · a chi scrivere se c'è un problema</div><div class="small muted" style="margin:-4px 0 10px">Il tasto SOS fa partire una videochiamata FaceTime (con condivisione schermo) oppure un messaggio WhatsApp già pronto.</div><div class="row keep"><div class="field"><label>Nome</label><input class="input" data-help="name" value="${esc(helpInfo().name)}"></div><div class="field"><label>Cellulare</label><input class="input" data-help="tel" inputmode="tel" value="${esc(helpInfo().tel)}" placeholder="es. 333 1234567"></div></div><div class="field"><label>FaceTime (facoltativo)</label><input class="input" data-help="ft" value="${esc(helpInfo().ft)}" placeholder="Se diverso dal cellulare: numero o email Apple" autocapitalize="off"></div><button class="btn sm" data-act="sos" style="margin-top:4px">Prova il tasto SOS</button></div>
      <div class="card set-card"><div class="sectitle">Collegamento dati</div>
-     <div class="syncinfo" id="syncinfo">${syncLabel()}</div>
+     <div class="syncinfo" id="syncinfo">${syncLabel()}</div><div class="small muted" style="margin-top:6px">Versione app: ${APP_VER}</div>
      ${syncOn()?`<div class="small muted" style="margin:8px 0 12px">iPad e telefono leggono e salvano sullo stesso foglio Google. Ogni sera viene fatta una copia di sicurezza.</div>
        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" data-act="sync-now">Aggiorna ora</button><button class="btn ghost sm" data-act="sync-off" style="color:var(--danger)">Scollega questo dispositivo</button></div>`
      :`<div class="small muted" style="margin:8px 0 12px">Inserisci la chiave per usare gli stessi dati su iPad e telefono.</div>
