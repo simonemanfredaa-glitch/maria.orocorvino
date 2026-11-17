@@ -706,6 +706,19 @@ body.stack .half .list-pane{max-height:none}
 .payline input{width:auto}
 .payempty{padding:14px 0 6px;color:var(--ink3);font-size:14px}
 .payadd{padding:8px 0 12px}
+.pk-top{position:sticky;top:-16px;z-index:2;background:var(--bg2,#F6F7F5);margin:-16px -16px 6px;padding:14px 16px 10px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid var(--line)}
+.pk-tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}.pk-tabs::-webkit-scrollbar{display:none}
+.pk-dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}
+.pk-h{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2);margin:16px 2px 8px}
+.pk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+.pk-item{position:relative;display:grid;grid-template-columns:1fr auto;grid-template-areas:"n r" "s r";align-items:center;column-gap:10px;row-gap:2px;min-height:64px;padding:10px 14px 10px 16px;border:1px solid var(--line);border-radius:14px;background:#fff;text-align:left;overflow:hidden}
+.pk-item::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--pc,transparent)}
+.pk-item:active{background:#F1FAF4;border-color:#BFE3CC}
+.pk-item[disabled]{opacity:.45}
+.pk-n{grid-area:n;font-weight:600;font-size:15.5px;line-height:1.25;color:var(--ink)}
+.pk-s{grid-area:s;font-size:12.5px;color:var(--ink2)}
+.pk-r{grid-area:r;white-space:nowrap;font-weight:700;font-size:15.5px;color:var(--ink);font-variant-numeric:tabular-nums}
+@media (max-width:760px){.pk-grid{grid-template-columns:1fr 1fr;gap:8px}.pk-item{min-height:58px;padding:8px 10px 8px 13px}.pk-n{font-size:14.5px}}
 .payadd select{height:44px;color:var(--gold-d);font-weight:600}
 .payline.use .tsel{height:40px;max-width:320px}
 .payline.flash{animation:pflash 1.2s ease}
@@ -1325,7 +1338,8 @@ function openSOS(){
   document.querySelectorAll('[data-sos]').forEach(b=>b.onclick=()=>sosStep(b.dataset.sos));
   $('#sos-ft').onclick=sosFaceTime;
 }
-function ftTarget(){ const h=helpInfo(); const f=String(h.ft||'').trim(); if(f.includes('@')) return f; const n=sosNum(); return f?waNum(f):n; }
+function ftTarget(){ const h=helpInfo(); let f=String(h.ft||'').trim(); if(/^https:/.test(f)) f=''; if(f.includes('@')) return f; const n=sosNum(); return f?waNum(f):n; }
+function ftLink(){ const f=String(helpInfo().ft||'').trim(); return /^https:\/\/facetime\.apple\.com\//.test(f)?f:''; }
 function ftHref(){ const t=ftTarget(); return t.includes('@')?t:'+'+t; }
 function sosFaceTime(){
   const h=helpInfo();
@@ -1334,7 +1348,7 @@ function sosFaceTime(){
       <ol class="ftsteps"><li>Tocca lo schermo: compaiono i tasti della chiamata in alto.</li><li>Tocca il tasto <b>Condividi</b> (un rettangolo con una persona dentro).</li><li>Tocca <b>Condividi il mio schermo</b>, poi torna nel gestionale.</li><li>Per smettere: tocca il tasto viola in alto a sinistra.</li></ol>
       <div class="small muted">Se non vuoi farti vedere, puoi spegnere la fotocamera: lo schermo si condivide lo stesso.</div></div>
       <div class="small muted" style="margin-top:10px">Se non parte: apri l’app <b>FaceTime</b> dell’iPad e chiama ${esc(h.name)} da lì.</div></div>
-    <div class="sheet-f"><a class="btn grow" href="facetime-audio:${ftHref()}" style="height:48px;display:flex;align-items:center;justify-content:center;text-decoration:none">Solo voce</a><a class="btn wa grow" id="ft-call" href="facetime:${ftHref()}" style="height:48px;display:flex;align-items:center;justify-content:center;text-decoration:none">Videochiama ${esc(h.name)}</a></div>`,'md');
+    <div class="sheet-f">${ftLink()?`<a class="btn wa grow" href="${esc(ftLink())}" target="_blank" rel="noopener" style="height:48px;display:flex;align-items:center;justify-content:center;text-decoration:none">Videochiama ${esc(h.name)}</a>`:`<a class="btn grow" href="facetime-audio:${ftHref()}" style="height:48px;display:flex;align-items:center;justify-content:center;text-decoration:none">Solo voce</a><a class="btn wa grow" id="ft-call" href="facetime:${ftHref()}" style="height:48px;display:flex;align-items:center;justify-content:center;text-decoration:none">Videochiama ${esc(h.name)}</a>`}</div>`,'md');
   $('#ft-back').onclick=openSOS;
 }
 function sosStep(k){
@@ -1635,13 +1649,13 @@ function renderPay(){
    <div class="sheet-b">
     ${c?`<div class="muted" style="margin-bottom:10px">${esc(c.name)} · ${hm(a.start)}</div>`:''}
     ${a?`<div class="paysec">Servizi</div><div class="card paycard">${svcHTML||'<div class="payempty">Nessun servizio</div>'}
-      <div class="payadd"><select class="input" id="addsvc"><option value="">+ Aggiungi servizio…</option>${CATS.map(cat=>{const l=DB.services.filter(x=>x.active&&x.cat===cat.id); return l.length?`<optgroup label="${esc(cat.id)}">${l.map(x=>`<option value="${x.id}">${esc(x.name)} — ${eur(x.price)}</option>`).join('')}</optgroup>`:''}).join('')}</select></div></div>`:''}
+      <div class="payadd"><button class="add-dashed" style="width:100%" id="addsvc">${ICONS.plus}Aggiungi servizio</button></div></div>`:''}
     <div class="paysec">Prodotti venduti</div>
     <div class="card paycard">${soldHTML||'<div class="payempty">Nessun prodotto venduto</div>'}
-      <div class="payadd"><select class="input" id="addprod"><option value="">+ Aggiungi prodotto venduto…</option>${vend.map(p=>`<option value="${p.id}" ${p.stock<=0?'disabled':''}>${esc(p.name)} — ${eur(p.price)}${p.stock<=0?' (esaurito)':' ('+p.stock+' disp.)'}</option>`).join('')}</select></div></div>
+      <div class="payadd"><button class="add-dashed" style="width:100%" id="addprod">${ICONS.plus}Aggiungi prodotto venduto</button></div></div>
     ${a?`<div class="paysec">Usati durante il servizio <span>si scalano dal magazzino, non si pagano</span></div>
     <div class="card paycard">${useHTML||'<div class="payempty">Nessun prodotto usato</div>'}
-      <div class="payadd"><select class="input" id="adduse"><option value="">+ Aggiungi prodotto usato…</option>${usable.map(p=>`<option value="${p.id}">${esc(p.name)}${p.size?' — a ml':''}</option>`).join('')}</select></div></div>`:''}
+      <div class="payadd"><button class="add-dashed" style="width:100%" id="adduse">${ICONS.plus}Aggiungi prodotto usato</button></div></div>`:''}
     <div class="paysec">Pagamento</div><div class="methods">${['Contanti','Carta','Altro'].map(m=>`<button class="${pay.method===m?'on':''}" data-act="pay-m" data-m="${m}">${m}</button>`).join('')}</div>
     <div class="total"><span>Totale</span><span id="paytot">${eur(payTotal())}</span></div>
    </div>
@@ -1652,14 +1666,40 @@ function renderPay(){
   document.querySelectorAll('[data-pi]').forEach(inp=>inp.oninput=()=>{ pay.items[+inp.dataset.pi].price=num(inp.value); upTot(); });
   document.querySelectorAll('[data-uq]').forEach(inp=>inp.oninput=()=>{ pay.uses[+inp.dataset.uq].qty=num(inp.value); });
   document.querySelectorAll('[data-ut]').forEach(sel=>sel.onchange=()=>{ pay.uses[+sel.dataset.ut].pid=sel.value; });
-  $('#addprod').onchange=e=>{ if(e.target.value){ addSold(e.target.value); renderPay(); } };
-  const as=$('#addsvc'); if(as) as.onchange=e=>{ const x=DB.services.find(v=>v.id===e.target.value); if(!x) return;
+  const byBrand=list=>{ const g={}; list.forEach(p=>{(g[p.brand||'Altro']=g[p.brand||'Altro']||[]).push(p);}); return Object.keys(g).sort().map(b=>({label:b,items:g[b]})); };
+  $('#addprod').onclick=()=>pickSheet({title:'Prodotto venduto',search:'Cerca prodotto o marca',
+    groups:byBrand(vend).map(g=>({label:g.label,items:g.items.map(p=>({id:p.id,name:p.name,right:eur(p.price),sub:p.stock<=0?'esaurito':p.stock+(p.stock===1?' disponibile':' disponibili'),disabled:p.stock<=0}))})),
+    onPick:id=>{ addSold(id); renderPay(); }, onBack:renderPay});
+  const as=$('#addsvc'); if(as) as.onclick=()=>pickSheet({title:'Aggiungi servizio',search:'Cerca servizio',
+    groups:CATS.map(cat=>({label:cat.id,color:catPal(cat.id).bar,items:DB.services.filter(x=>x.active&&x.cat===cat.id).map(x=>({id:x.id,name:x.name,right:eur(x.price),sub:x.dur?x.dur+' min':''}))})),
+    onPick:id=>addSvcPay(id), onBack:renderPay});
+  const addSvcPay=id=>{ const x=DB.services.find(v=>v.id===id); if(!x) return;
     const ni=pay.items.filter(i=>i.kind!=='prodotto').length; pay.items.splice(ni,0,{label:x.name,price:x.price,kind:'servizio',qty:1,svcId:x.id});
     const tg=pay.uses.find(u=>u.tinta)?.pid||guessTinta(cli(a.clientId));
     (x.consumes||[]).forEach(c=>{ const pid=c.pid==='tinta'?tg:c.pid; if(pid) pay.uses.push({pid,qty:c.qty,unit:c.unit,tinta:c.pid==='tinta',from:x.name}); });
     pay._flash='svc'; renderPay(); };
-  const au=$('#adduse'); if(au) au.onchange=e=>{ const p=prod(e.target.value); if(!p) return; const ml=!!p.size;
+  const au=$('#adduse'); if(au) au.onclick=()=>pickSheet({title:'Prodotto usato',search:'Cerca prodotto o marca',
+    groups:byBrand(usable).map(g=>({label:g.label,items:g.items.map(p=>({id:p.id,name:p.name,sub:(p.size?'a ml · ':'')+p.stock+' in magazzino'}))})),
+    onPick:id=>addUsePay(id), onBack:renderPay});
+  const addUsePay=id=>{ const p=prod(id); if(!p) return; const ml=!!p.size;
     pay.uses.push({pid:p.id,qty:ml?Math.max(5,Math.round(p.size/10)):1,unit:ml?'ml':'pz'}); pay._flash='use-'+(pay.uses.length-1); renderPay(); };
+}
+function pickSheet(o){
+  let q='', tab='Tutti'; const groups=o.groups.filter(g=>g.items.length);
+  const tabs=groups.length>1?['Tutti',...groups.map(g=>g.label)]:[];
+  openSheet(`<div class="sheet-h"><button class="btn ghost sm" id="pk-back">‹ Indietro</button><h2>${esc(o.title)}</h2><span style="width:80px"></span></div>
+    <div class="sheet-b pk"><div class="pk-top">${o.search?`<div class="search-in">${ICONS.search}<input id="pk-q" placeholder="${esc(o.search)}" autocomplete="off"></div>`:''}
+      ${tabs.length?`<div class="pk-tabs" id="pk-tabs"></div>`:''}</div><div id="pk-list"></div></div>`,'md pksheet');
+  const draw=()=>{ const ql=q.toLowerCase();
+    if(tabs.length) $('#pk-tabs').innerHTML=tabs.map(t=>{ const g=groups.find(x=>x.label===t); return `<button class="fchip ${t===tab?'on':''}" data-pt="${esc(t)}">${g&&g.color?`<i class="pk-dot" style="background:${g.color}"></i>`:''}${esc(t)}</button>`; }).join('');
+    const html=groups.filter(g=>tab==='Tutti'||g.label===tab).map(g=>{ const it=g.items.filter(x=>!ql||(x.name+' '+g.label).toLowerCase().includes(ql)); if(!it.length) return '';
+      return `<div class="pk-h">${g.color?`<i class="pk-dot" style="background:${g.color}"></i>`:''}${esc(g.label)}</div><div class="pk-grid">${it.map(x=>`<button class="pk-item" data-pk="${x.id}" ${x.disabled?'disabled':''} ${g.color?`style="--pc:${g.color}"`:''}><span class="pk-n">${esc(x.name)}</span>${x.sub?`<span class="pk-s">${esc(x.sub)}</span>`:''}${x.right?`<span class="pk-r">${x.right}</span>`:''}</button>`).join('')}</div>`; }).join('');
+    $('#pk-list').innerHTML=html||'<div class="empty">Nessun risultato</div>';
+    document.querySelectorAll('[data-pt]').forEach(b=>b.onclick=()=>{ tab=b.dataset.pt; draw(); });
+    document.querySelectorAll('[data-pk]').forEach(b=>b.onclick=()=>o.onPick(b.dataset.pk));
+  };
+  $('#pk-back').onclick=o.onBack; const qi=$('#pk-q'); if(qi) qi.oninput=e=>{ q=e.target.value; draw(); };
+  draw();
 }
 function consume(pid,qty,unit){ const p=prod(pid); if(!p||!(qty>0)) return; if(unit==='ml'&&p.size){ p.used=(p.used||0)+qty; while(p.used>=p.size){ p.used-=p.size; p.stock=Math.max(0,p.stock-1); } } else p.stock=Math.max(0,p.stock-qty); }
 function confirmPay(){
@@ -2041,7 +2081,7 @@ function renderImpostazioni(){
   const hours=[1,2,3,4,5,6,0].map(dw=>{ const h=st.hours[dw]; return `<div class="set-row"><span class="set-day">${GIORNI[dw]}</span>${tgl(h.open,'h-open',`data-d="${dw}"`)}${h.open?`<select class="input sm" data-hf="${dw}">${timeOpts(h.from,300,1380)}</select><span class="muted">–</span><select class="input sm" data-ht="${dw}">${timeOpts(h.to,300,1380)}</select>`:'<span class="muted grow">Chiuso</span>'}</div>`; }).join('');
   const fer=[...st.closures].sort((a,b)=>a.from.localeCompare(b.from)).map(c=>`<div class="set-row"><span class="legend"><i></i></span><div class="grow"><b>${esc(c.title)}</b><div class="small muted">${fmtDate(c.from)} – ${fmtDate(c.to)}</div></div><button class="btn sm ghost" data-act="clos-rm" data-id="${c.id}" style="color:var(--danger)">Togli</button></div>`).join('')||'<div class="small muted">Nessuna chiusura programmata.</div>';
   $('#content').innerHTML=`<div class="set-grid">
-   <div class="set-col"><div class="card set-card"><div class="sectitle">SOS · a chi scrivere se c'è un problema</div><div class="small muted" style="margin:-4px 0 10px">Il tasto SOS fa partire una videochiamata FaceTime (con condivisione schermo) oppure un messaggio WhatsApp già pronto.</div><div class="row keep"><div class="field"><label>Nome</label><input class="input" data-help="name" value="${esc(helpInfo().name)}"></div><div class="field"><label>Cellulare</label><input class="input" data-help="tel" inputmode="tel" value="${esc(helpInfo().tel)}" placeholder="es. 333 1234567"></div></div><div class="field"><label>FaceTime (facoltativo)</label><input class="input" data-help="ft" value="${esc(helpInfo().ft)}" placeholder="Se diverso dal cellulare: numero o email Apple" autocapitalize="off"></div><button class="btn sm" data-act="sos" style="margin-top:4px">Prova il tasto SOS</button></div>
+   <div class="set-col"><div class="card set-card"><div class="sectitle">SOS · a chi scrivere se c'è un problema</div><div class="small muted" style="margin:-4px 0 10px">Il tasto SOS fa partire una videochiamata FaceTime (con condivisione schermo) oppure un messaggio WhatsApp già pronto.</div><div class="row keep"><div class="field"><label>Nome</label><input class="input" data-help="name" value="${esc(helpInfo().name)}"></div><div class="field"><label>Cellulare</label><input class="input" data-help="tel" inputmode="tel" value="${esc(helpInfo().tel)}" placeholder="es. 333 1234567"></div></div><div class="field"><label>FaceTime (facoltativo)</label><input class="input" data-help="ft" value="${esc(helpInfo().ft)}" placeholder="Link FaceTime, oppure numero o email Apple" autocapitalize="off"></div><button class="btn sm" data-act="sos" style="margin-top:4px">Prova il tasto SOS</button></div>
      <div class="card set-card"><div class="sectitle">Collegamento dati</div>
      <div class="syncinfo" id="syncinfo">${syncLabel()}</div>
      ${syncOn()?`<div class="small muted" style="margin:8px 0 12px">iPad e telefono leggono e salvano sullo stesso foglio Google. Ogni sera viene fatta una copia di sicurezza.</div>
