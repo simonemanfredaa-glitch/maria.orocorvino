@@ -706,6 +706,8 @@ body.stack .half .list-pane{max-height:none}
 .payline input{width:auto}
 .payempty{padding:14px 0 6px;color:var(--ink3);font-size:14px}
 .payadd{padding:8px 0 12px}
+.pickfield{width:100%;min-height:48px;display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:#fff;text-align:left;font-size:15.5px;color:var(--ink3,#999)}
+.pickfield.set{color:var(--ink);font-weight:600}.pickfield span{flex:1}.pickfield b{color:var(--gold);font-size:14px}
 .pk-top{position:sticky;top:-16px;z-index:2;background:var(--bg2,#F6F7F5);margin:-16px -16px 6px;padding:14px 16px 10px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid var(--line)}
 .pk-tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}.pk-tabs::-webkit-scrollbar{display:none}
 .pk-dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}
@@ -1880,16 +1882,23 @@ function consAddSheet(){
     const z=$('#ca-sz'); if(z) z.oninput=()=>{ st.size=z.value; draw(); const z2=$('#ca-sz'); z2.focus(); z2.setSelectionRange(z2.value.length,z2.value.length); };
     $('#ca-ok').disabled=!(st.pid&&st.mode&&num(st.qty)>0&&(st.mode!=='ml'||(st.pid==='tinta'||num(st.size)||prod(st.pid)?.size)));
   };
+  const pName=()=>st.pid==='tinta'?'Tinta · il colore lo scegli all’incasso':(prod(st.pid)?`${prod(st.pid).name} · ${prod(st.pid).brand}`:'');
+  const pick=()=>{ const g={}; prods.forEach(p=>{(g[p.brand||'Altro']=g[p.brand||'Altro']||[]).push(p);});
+    pickSheet({title:'Scegli il prodotto',search:'Cerca prodotto o marca',
+      groups:[{label:'Tinta',items:[{id:'tinta',name:'Tinta',sub:'il colore lo scegli all’incasso'}]},...Object.keys(g).sort().map(b=>({label:b,items:g[b].map(p=>({id:p.id,name:p.name,sub:(p.size?p.size+' ml · ':'')+p.stock+' in magazzino'}))}))],
+      onPick:id=>{ st.pid=id; const p=prod(id); st.mode=id==='tinta'?'pz':(p?.size?'ml':''); st.qty=st.mode==='pz'?1:''; st.size=p?.size||''; show(); }, onBack:()=>st.pid?show():closeSheet()}); };
+  const show=()=>{
   openSheet(`<div class="sheet-h"><button class="btn ghost sm" data-act="close">Annulla</button><h2>Collega prodotto</h2><button class="btn sm primary" id="ca-ok">Collega</button></div>
    <div class="sheet-b"><div class="small muted" style="margin-bottom:12px">Scegli cosa usi per “${esc(s.name)}”: quando lo incassi, il magazzino si aggiorna da solo.</div>
-   <div class="field"><label>1 · Prodotto</label><select class="input" id="ca-p"><option value="">Scegli…</option><option value="tinta">Tinta · il colore lo scegli all'incasso</option>${prods.map(p=>`<option value="${p.id}">${esc(p.name)} — ${esc(p.brand)}</option>`).join('')}</select></div>
+   <div class="field"><label>1 · Prodotto</label><button class="pickfield ${st.pid?'set':''}" id="ca-p"><span>${st.pid?esc(pName()):'Scegli il prodotto…'}</span><b>${st.pid?'Cambia':'›'}</b></button></div>
    <div id="ca-body"></div></div>`,'md');
-  $('#ca-p').onchange=e=>{ st.pid=e.target.value; const p=prod(st.pid); st.mode=st.pid==='tinta'?'pz':(p?.size?'ml':''); st.qty=st.mode==='pz'?1:''; st.size=p?.size||''; draw(); };
+  $('#ca-p').onclick=pick;
   $('#ca-ok').onclick=()=>{ if($('#ca-ok').disabled) return; const unit=st.mode, qty=num(st.qty);
     if(unit==='ml'&&st.pid!=='tinta'){ const p=prod(st.pid); p.size=num(st.size)||p.size; p.used=p.used||0; }
     if(unit==='ml'&&st.pid==='tinta'){ tinte.forEach(t=>{ if(!t.size){ t.size=tsize; t.used=t.used||0; } }); }
     s.consumes=s.consumes||[]; s.consumes.push({pid:st.pid,qty,unit}); save(); closeSheet(); renderSvcEdit(); toast('Prodotto collegato'); };
-  draw();
+  draw(); };
+  show(); if(!st.pid) pick();
 }
 
 /* ============ MAGAZZINO (5) ============ */
