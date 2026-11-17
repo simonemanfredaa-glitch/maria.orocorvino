@@ -1326,15 +1326,16 @@ function openSOS(){
   $('#sos-ft').onclick=sosFaceTime;
 }
 function ftTarget(){ const h=helpInfo(); const f=String(h.ft||'').trim(); if(f.includes('@')) return f; const n=sosNum(); return f?waNum(f):n; }
+function ftHref(){ const t=ftTarget(); return t.includes('@')?t:'+'+t; }
 function sosFaceTime(){
   const h=helpInfo();
   openSheet(`<div class="sheet-h"><button class="btn ghost sm" id="ft-back">‹ Indietro</button><h2>FaceTime</h2><span style="width:70px"></span></div>
     <div class="sheet-b"><div style="font-weight:600;margin-bottom:10px">Quando ${esc(h.name)} risponde, per fargli vedere lo schermo:</div>
       <ol class="ftsteps"><li>Tocca lo schermo: compaiono i tasti della chiamata in alto.</li><li>Tocca il tasto <b>Condividi</b> (un rettangolo con una persona dentro).</li><li>Tocca <b>Condividi il mio schermo</b>, poi torna nel gestionale.</li><li>Per smettere: tocca il tasto viola in alto a sinistra.</li></ol>
       <div class="small muted">Se non vuoi farti vedere, puoi spegnere la fotocamera: lo schermo si condivide lo stesso.</div></div>
-    <div class="sheet-f"><button class="btn wa grow" id="ft-call" style="height:48px">Chiama ${esc(h.name)}</button></div>`,'md');
+      <div class="small muted" style="margin-top:10px">Se non parte: apri l’app <b>FaceTime</b> dell’iPad e chiama ${esc(h.name)} da lì.</div></div>
+    <div class="sheet-f"><a class="btn grow" href="facetime-audio:${ftHref()}" style="height:48px;display:flex;align-items:center;justify-content:center;text-decoration:none">Solo voce</a><a class="btn wa grow" id="ft-call" href="facetime:${ftHref()}" style="height:48px;display:flex;align-items:center;justify-content:center;text-decoration:none">Videochiama ${esc(h.name)}</a></div>`,'md');
   $('#ft-back').onclick=openSOS;
-  $('#ft-call').onclick=()=>{ const t=ftTarget(); const l=document.createElement('a'); l.href='facetime:'+(t.includes('@')?t:'+'+t); document.body.appendChild(l); l.click(); l.remove(); };
 }
 function sosStep(k){
   const h=helpInfo(); const label=k==='altro'?'Altro':SOS_OPTS.find(o=>o[0]===k)[1]; const altro=k==='altro';
