@@ -1,0 +1,11 @@
+<!DOCTYPE html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Chiamata FaceTime</title>
+<style>body{margin:0;font-family:-apple-system,system-ui,sans-serif;background:#F6F7F5;color:#1b2b22;display:flex;min-height:100vh;align-items:center;justify-content:center;text-align:center}
+.box{padding:32px;max-width:420px}h1{font-size:24px;margin:0 0 10px}p{color:#5b6b62;font-size:17px;line-height:1.45}
+a.b{display:block;margin:26px 0 14px;padding:18px;border-radius:16px;background:#1F9D55;color:#fff;font-size:20px;font-weight:700;text-decoration:none}</style></head>
+<body><div class="box"><h1 id="t">Chiamata FaceTime</h1><p>Tocca il tasto verde, poi conferma con <b>Chiama</b>.</p>
+<a class="b" id="go" href="#">📹 Avvia FaceTime</a><p style="font-size:15px">Finita la chiamata, torna al gestionale dalla schermata Home.</p></div>
+<script>
+const q=new URLSearchParams(location.search); const to=q.get('to')||''; const n=q.get('n')||'';
+if(n) document.getElementById('t').textContent='Chiama '+n;
+const href='facetime:'+to; const a=document.getElementById('go'); a.href=href;
+</script></body></html>

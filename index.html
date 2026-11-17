@@ -1351,7 +1351,7 @@ function sosFaceTime(){
       <div style="font-weight:600;margin-bottom:8px">Quando squilla, rispondi. Poi, per fargli vedere lo schermo:</div>
       <ol class="ftsteps"><li>Tocca lo schermo: compaiono i tasti della chiamata in alto.</li><li>Tocca il tasto <b>Condividi</b> (un rettangolo con una persona dentro).</li><li>Tocca <b>Condividi il mio schermo</b>, poi torna nel gestionale.</li><li>Per smettere: tocca il tasto viola in alto a sinistra.</li></ol>
       <div class="small muted">Se non vuoi farti vedere, puoi spegnere la fotocamera: lo schermo si condivide lo stesso.</div></div>
-    <div class="sheet-f"><button class="btn grow" id="ft-ask" style="height:48px">Fatti richiamare</button><a class="btn wa grow" href="facetime:${ftHref()}" style="height:48px;display:flex;align-items:center;justify-content:center;text-decoration:none">Chiama ${esc(h.name)}</a></div>`,'md');
+    <div class="sheet-f"><button class="btn grow" id="ft-ask" style="height:48px">Fatti richiamare</button><a class="btn wa grow" href="${navigator.standalone?`ft.html?to=${encodeURIComponent(ftHref())}&n=${encodeURIComponent(h.name)}`:`facetime:${ftHref()}`}" ${navigator.standalone?'target="_blank" rel="noopener"':''} style="height:48px;display:flex;align-items:center;justify-content:center;text-decoration:none">Chiama ${esc(h.name)}</a></div>`,'md');
   $('#ft-back').onclick=openSOS;
   $('#ft-ask').onclick=()=>{ const now=new Date();
     waOpen(sosNum(), `Ciao ${h.name}, mi chiami su FaceTime? Ti faccio vedere lo schermo del gestionale.\n\n(Dettagli tecnici: pagina ${VIEWNAME[ui.view]||ui.view}, ${sosDevice()}, ore ${now.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})})`);
