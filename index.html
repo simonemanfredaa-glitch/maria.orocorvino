@@ -602,7 +602,7 @@ textarea.input{height:auto;min-height:80px;padding:12px 14px;resize:vertical;lin
   .mgrow .pm{grid-column:3;grid-row:1}
   .mgrow>div:nth-child(3){grid-column:1 / span 2}
   .mgrow .mname{grid-column:1 / span 2;grid-row:1}
-  .mgrow .qcell{display:flex;align-items:center;gap:10px}.mgrow .qcell .sbar{flex:1;min-width:0}.mgrow .qcell small{white-space:nowrap;flex:none}
+  .mgrow .qcell{grid-column:1 / -1!important;font-variant-numeric:tabular-nums;display:grid;grid-template-columns:minmax(0,1fr) 78px;align-items:center;gap:8px}.mgrow .qcell .sbar{display:grid;grid-template-columns:minmax(0,1fr) 38px;align-items:center;gap:8px;min-width:0}.mgrow .qcell .sbar .trk{width:100%}.mgrow .qcell .sbar b{text-align:right}.mgrow .qcell small{white-space:nowrap;text-align:right}
   .set-grid{grid-template-columns:1fr}
   .mg-bar .search-in{width:100%!important}
   .fchips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
@@ -1005,7 +1005,7 @@ if(!DB||DB.v!==5) DB=seed();
 const save=()=>{ try{ localStorage.setItem(STORE,JSON.stringify(DB)); }catch(e){} try{ syncOnSave(); }catch(e){} };
 /* ============ COLLEGAMENTO DATI (Google Sheet) ============ */
 /* ---- aggiornamento automatico dell'app ---- */
-const APP_VER='20261125-085248';
+const APP_VER='20261125-085459';
 let updWait=false;
 function checkUpdate(){ if(APP_VER==='dev'||!navigator.onLine) return;
   fetch('version.txt?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(v=>{ v=(v||'').trim(); if(!v||v===APP_VER) return;
@@ -1951,13 +1951,13 @@ function renderProdRows(){
   const head=`<div class="mgrow hd"><div>Articolo</div><div class="c-sec">Sezione</div><div>Quantità</div><div class="r c-acq">Acquisto</div><div class="r">Vendita</div><div class="r c-mrg">Guadagno</div><div class="r">Usato · Arrivato</div></div>`;
   $('#mgt').innerHTML=head+(list.map(p=>{
     const [f,t]=SECCOL[p.sec]||SECCOL.Capelli;
-    const name=`<button class="mname" data-act="p-edit" data-id="${p.id}"><b>${esc(p.name)}</b><span>${esc(p.brand)}</span></button>`;
+    const name=`<button class="mname" data-act="p-edit" data-id="${p.id}"><b>${esc(p.name)}</b><span>${esc(p.brand)}${p.size?` · aperta ${Math.round((p.used||0)/p.size*100)}%`:''}</span></button>`;
     const sec=`<div class="c-sec"><span class="tag" style="background:${f};color:${t}">${p.sec}</span></div>`;
     if(p.kind==='attrezzo') return `<div class="mgrow">${name}${sec}<div><b>${p.stock}</b> pz</div><div class="r c-acq">${eur(p.cost)}</div><div class="r">${p.status==='In uso'?'<span class="tag ok">In uso</span>':`<span class="tag bday">${esc(p.status||'—')}</span>`}</div><div class="r c-mrg muted">—</div><div class="r"><button class="btn sm ghost" data-act="p-edit" data-id="${p.id}">Dettagli</button></div></div>`;
     const low=p.stock<=p.min; const pct=Math.min(100,p.stock/Math.max(1,p.min*3)*100);
     const mg=margin(p);
     return `<div class="mgrow">${name}${sec}
-      <div class="qcell"><div class="sbar"><div class="trk"><div style="width:${pct}%;background:${low?'#C2553B':'var(--gold)'}"></div></div><b class="${low?'low':''}">${p.stock}</b></div><small class="muted">minimo ${p.min}${p.size?` · aperta ${Math.round((p.used||0)/p.size*100)}%`:''}</small></div>
+      <div class="qcell"><div class="sbar"><div class="trk"><div style="width:${pct}%;background:${low?'#C2553B':'var(--gold)'}"></div></div><b class="${low?'low':''}">${p.stock}</b></div><small class="muted">minimo ${p.min}</small></div>
       <div class="r c-acq"><b>${eur2(p.cost)}</b> <small class="muted">+IVA</small><br><small class="muted">${eur2(costIva(p))} ivato</small></div>
       <div class="r">${p.price?`<b>${eur(p.price)}</b><br><small class="muted">IVA incl.</small>`:'<small class="muted">uso salone</small>'}</div>
       <div class="r c-mrg">${mg?`<b style="color:var(--gold-d)">${eur2(mg.m)}</b><br><small class="muted">${mg.label} · ${mg.pct}%</small>`:'<span class="muted">—</span>'}</div>
