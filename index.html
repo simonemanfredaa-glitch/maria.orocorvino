@@ -834,6 +834,25 @@ body.notch-r .app{padding-left:min(env(safe-area-inset-left),10px)}
   .btn.cact{height:36px;font-size:13.5px}
   .cd-stats>div{padding:7px 10px}.cd-stats b{font-size:15px}.cd-stats small{font-size:11.5px}
 }
+
+/* ---- armonia testi e campi (v2.3) ---- */
+.input{height:44px;font-size:16px}
+.field label{font-size:12px}
+textarea.input{height:auto;padding:10px 14px}
+@media (max-height:500px){
+  .input{height:38px;font-size:15px;padding:0 12px;border-radius:10px}
+  textarea.input{padding:8px 12px}
+  select.input{padding-right:28px;background-position:right 9px center}
+  .field{gap:4px;margin-bottom:10px}
+  .field label{font-size:11px}
+  .btn{height:38px;font-size:14px;padding:0 14px}
+  .btn.sm{height:32px;font-size:13px;padding:0 11px}
+  .sectitle{font-size:16px}
+  .lab{font-size:11px}
+  .card{border-radius:14px}
+  .det-row{font-size:14px}
+  .seg button{font-size:12.5px}
+}
 </style>
 </head>
 <body>
@@ -1029,7 +1048,7 @@ if(!DB||DB.v!==5) DB=seed();
 const save=()=>{ try{ localStorage.setItem(STORE,JSON.stringify(DB)); }catch(e){} try{ syncOnSave(); }catch(e){} };
 /* ============ COLLEGAMENTO DATI (Google Sheet) ============ */
 /* ---- aggiornamento automatico dell'app ---- */
-const APP_VER='20261125-094608';
+const APP_VER='20261125-095443';
 let updWait=false;
 function checkUpdate(){ if(APP_VER==='dev'||!navigator.onLine) return;
   fetch('version.txt?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(v=>{ v=(v||'').trim(); if(!v||v===APP_VER) return;
