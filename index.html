@@ -602,6 +602,7 @@ textarea.input{height:auto;min-height:80px;padding:12px 14px;resize:vertical;lin
   .mgrow .pm{grid-column:3;grid-row:1}
   .mgrow>div:nth-child(3){grid-column:1 / span 2}
   .mgrow .mname{grid-column:1 / span 2;grid-row:1}
+  .mgrow .qcell{display:flex;align-items:center;gap:10px}.mgrow .qcell .sbar{flex:1;min-width:0}.mgrow .qcell small{white-space:nowrap;flex:none}
   .set-grid{grid-template-columns:1fr}
   .mg-bar .search-in{width:100%!important}
   .fchips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
@@ -1004,7 +1005,7 @@ if(!DB||DB.v!==5) DB=seed();
 const save=()=>{ try{ localStorage.setItem(STORE,JSON.stringify(DB)); }catch(e){} try{ syncOnSave(); }catch(e){} };
 /* ============ COLLEGAMENTO DATI (Google Sheet) ============ */
 /* ---- aggiornamento automatico dell'app ---- */
-const APP_VER='20261125-085146';
+const APP_VER='20261125-085248';
 let updWait=false;
 function checkUpdate(){ if(APP_VER==='dev'||!navigator.onLine) return;
   fetch('version.txt?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(v=>{ v=(v||'').trim(); if(!v||v===APP_VER) return;
@@ -1956,7 +1957,7 @@ function renderProdRows(){
     const low=p.stock<=p.min; const pct=Math.min(100,p.stock/Math.max(1,p.min*3)*100);
     const mg=margin(p);
     return `<div class="mgrow">${name}${sec}
-      <div><div class="sbar"><div class="trk"><div style="width:${pct}%;background:${low?'#C2553B':'var(--gold)'}"></div></div><b class="${low?'low':''}">${p.stock}</b></div><small class="muted">minimo ${p.min}${p.size?` · aperta ${Math.round((p.used||0)/p.size*100)}%`:''}</small></div>
+      <div class="qcell"><div class="sbar"><div class="trk"><div style="width:${pct}%;background:${low?'#C2553B':'var(--gold)'}"></div></div><b class="${low?'low':''}">${p.stock}</b></div><small class="muted">minimo ${p.min}${p.size?` · aperta ${Math.round((p.used||0)/p.size*100)}%`:''}</small></div>
       <div class="r c-acq"><b>${eur2(p.cost)}</b> <small class="muted">+IVA</small><br><small class="muted">${eur2(costIva(p))} ivato</small></div>
       <div class="r">${p.price?`<b>${eur(p.price)}</b><br><small class="muted">IVA incl.</small>`:'<small class="muted">uso salone</small>'}</div>
       <div class="r c-mrg">${mg?`<b style="color:var(--gold-d)">${eur2(mg.m)}</b><br><small class="muted">${mg.label} · ${mg.pct}%</small>`:'<span class="muted">—</span>'}</div>
