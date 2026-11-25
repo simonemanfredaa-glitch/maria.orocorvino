@@ -810,6 +810,22 @@ select.input:disabled{opacity:.6}
 .nav .setbtn{position:relative}
 body[data-sync=pending] .nav .setbtn::after,body[data-sync=offline] .nav .setbtn::after,body[data-sync=key] .nav .setbtn::after{content:'';position:absolute;top:8px;right:22px;width:9px;height:9px;border-radius:50%;background:#D9A43B;border:2px solid #fff}
 body[data-sync=offline] .nav .setbtn::after,body[data-sync=key] .nav .setbtn::after{background:#C0533F}
+
+/* ---- telefono orizzontale: più spazio (v2.2) ---- */
+body.notch-l .app{padding-right:min(env(safe-area-inset-right),10px)}
+body.notch-r .app{padding-left:min(env(safe-area-inset-left),10px)}
+@media (max-height:500px){
+  .mgrow{grid-template-columns:minmax(0,1fr) minmax(150px,220px) 86px 92px!important}
+  .mgrow .c-acq,.mgrow .c-mrg,.mgrow .c-sec{display:none!important}
+  .mname b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .half{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)}
+  .li-row{grid-template-columns:minmax(0,1fr) 54px 52px!important;margin-left:8px;width:calc(100% - 8px);padding:9px 10px 9px 10px}
+  .li-c{display:none}
+  .li-n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;overflow-wrap:normal}
+  .li-cat{flex-wrap:nowrap}.li-cat b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .svrow{gap:8px;display:grid;grid-template-columns:1fr 1.1fr .8fr}.svrow .field{min-width:0}.svrow label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .svrow select.input{padding-left:12px;padding-right:26px;background-position:right 8px center}
+}
 </style>
 </head>
 <body>
@@ -1005,7 +1021,7 @@ if(!DB||DB.v!==5) DB=seed();
 const save=()=>{ try{ localStorage.setItem(STORE,JSON.stringify(DB)); }catch(e){} try{ syncOnSave(); }catch(e){} };
 /* ============ COLLEGAMENTO DATI (Google Sheet) ============ */
 /* ---- aggiornamento automatico dell'app ---- */
-const APP_VER='20261125-085459';
+const APP_VER='20261125-090752';
 let updWait=false;
 function checkUpdate(){ if(APP_VER==='dev'||!navigator.onLine) return;
   fetch('version.txt?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(v=>{ v=(v||'').trim(); if(!v||v===APP_VER) return;
@@ -1853,7 +1869,7 @@ function renderSvcEdit(){
     <button class="btn ghost sm only-stack" data-act="svc-back" style="align-self:flex-start">${ICONS.back} Tutti i servizi</button>
     <div style="display:flex;align-items:baseline;gap:10px"><h2 class="grow">${esc(s.name)}</h2><span class="small muted">${n} questo mese · ${eur(rev)}</span></div>
     <div class="row"><div class="field"><label>Nome</label><input class="input" id="sv-name" data-id="${s0.id}" value="${esc(s.name)}"></div><div class="field"><label>Sezione</label><select class="input" id="sv-cat">${CATS.map(c=>`<option ${c.id===s.cat?'selected':''}>${c.id}</option>`).join('')}</select></div></div>
-    <div class="row"><div class="field"><label>Durata</label><select class="input" id="sv-dur">${durs.map(d=>`<option value="${d}" ${d===s.dur?'selected':''}>${d} min</option>`).join('')}</select></div><div class="field"><label>Tempo di posa</label><select class="input" id="sv-posa">${posas.map(d=>`<option value="${d}" ${d===(s.posa||0)?'selected':''}>${d?d+' min':'Nessuno'}</option>`).join('')}</select></div><div class="field"><label>Prezzo €</label><input class="input" id="sv-price" inputmode="decimal" value="${s.price}"></div></div>
+    <div class="row svrow"><div class="field"><label>Durata</label><select class="input" id="sv-dur">${durs.map(d=>`<option value="${d}" ${d===s.dur?'selected':''}>${d} min</option>`).join('')}</select></div><div class="field"><label>Posa</label><select class="input" id="sv-posa">${posas.map(d=>`<option value="${d}" ${d===(s.posa||0)?'selected':''}>${d?d+' min':'Nessuno'}</option>`).join('')}</select></div><div class="field"><label>Prezzo €</label><input class="input" id="sv-price" inputmode="decimal" value="${s.price}"></div></div>
     <div class="small muted" style="margin-top:-6px">Il tempo di posa è il tempo in cui puoi lavorare su un'altra cliente.</div>
     <div class="small muted" style="display:flex;align-items:center;gap:8px"><span class="sw sm" style="background:${catPal(s.cat).bar}"></span>Colore in agenda: quello della sezione “${esc(s.cat)}”. Si cambia dalla sezione.</div>
     <div><div style="display:flex;align-items:center">${lab('Prodotti consumati a ogni servizio')}<span class="grow"></span><button class="li-add" data-act="cons-add">+ Collega prodotto</button></div>
@@ -2172,6 +2188,7 @@ setInterval(()=>{ if(S().pin.on && unlocked && Date.now()-lastAct>10*60*1000){ u
 function render(){
   syncCats();
   const pb=document.querySelector('.proto'); if(pb) pb.style.display=syncOn()?'none':'';
+  { const a=(screen.orientation&&typeof screen.orientation.angle==='number')?screen.orientation.angle:(window.orientation||0); const land=innerWidth>innerHeight; document.body.classList.toggle('notch-l',land&&(a===90)); document.body.classList.toggle('notch-r',land&&(a===270||a===-90)); }
   document.body.classList.toggle('stack',isStack()); document.body.classList.toggle('tport',!isPhone()&&isStack());
   $('#topbar').classList.remove('agenda-top','phone-top');
   renderNav(); if(ui.sel && !DB.appts.find(a=>a.id===ui.sel)) ui.sel=null; renderAgenda._keep = renderAgenda._keep || (ui.view==='agenda' && !!$('#calbody'));
@@ -2295,6 +2312,7 @@ document.addEventListener('touchend',e=>{ if(tx==null) return; const dx=e.change
     renderAgenda._keep=true; render(); } },{passive:true});
 const layoutKey=()=>isPhone()+'/'+isShort()+'/'+isStack();
 let lastP=layoutKey();
+addEventListener('orientationchange',()=>setTimeout(render,300));
 addEventListener('resize',()=>{ const k=layoutKey(); if(lastP!==k){ lastP=k; if(isShort()) ui.mode='week'; ui.sel=null; renderAgenda._keep=false; render(); } });
 setInterval(()=>{ if(ui.view==='agenda' && !$('#overlay').classList.contains('show')){ const st=$('#calbody')?.scrollTop; renderAgenda(); if(st!=null&&$('#calbody')) $('#calbody').scrollTop=st; } },60000);
 render();
