@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Salone">
@@ -28,7 +28,7 @@
 html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;-webkit-font-smoothing:antialiased}
 button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;padding:0}
 input,select,textarea{font:inherit;color:inherit}
-.app{display:flex;height:100vh;height:100dvh;overflow:hidden}
+.app{display:flex;height:100vh;height:100dvh;overflow:hidden;box-sizing:border-box;padding:env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left)}
 
 /* NAV */
 .nav{width:var(--nav);flex:none;background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:18px 0 12px;gap:6px}
@@ -309,7 +309,7 @@ textarea.input{height:auto;min-height:80px;padding:12px 14px;resize:vertical;lin
 @media (max-width: 760px) and (min-height: 501px){
   :root{--nav:0px}
   .app{flex-direction:column-reverse}
-  .nav{width:100%;flex-direction:row;padding:6px 6px calc(6px + env(safe-area-inset-bottom));gap:0;justify-content:space-around;border-right:0;border-top:1px solid var(--line)}
+  .nav{width:100%;flex-direction:row;padding:6px calc(14px + env(safe-area-inset-right)) calc(6px + max(env(safe-area-inset-bottom),6px)) calc(14px + env(safe-area-inset-left));gap:0;justify-content:space-around;border-right:0;border-top:1px solid var(--line)}
   .nav button{width:auto}
   .brand,.nav .spacer{display:none}
   .nav button{margin:0;min-height:54px;flex:1;font-size:11px;padding:6px 2px}
@@ -329,7 +329,8 @@ textarea.input{height:auto;min-height:80px;padding:12px 14px;resize:vertical;lin
   .svc-row{grid-template-columns:24px minmax(0,1fr) 92px 92px;}
   .svc-row .del{display:none}
   .overlay{padding:0;align-items:flex-end}
-  .sheet{width:100%;border-radius:20px 20px 0 0;max-height:94dvh}
+  .sheet{width:100%;border-radius:20px 20px 0 0;max-height:calc(94dvh - env(safe-area-inset-top))}
+  .sheet-f{padding-bottom:calc(12px + env(safe-area-inset-bottom))}
   .hide-phone{display:none!important}
   .two.half{grid-template-columns:1fr}
   .detail-head{flex-wrap:wrap}
@@ -344,7 +345,7 @@ textarea.input{height:auto;min-height:80px;padding:12px 14px;resize:vertical;lin
   .content>.pcal{flex-shrink:1}
   .strip{margin-bottom:6px}
   .schip{height:26px}
-  .nav{padding:4px 4px calc(4px + env(safe-area-inset-bottom))}
+  .nav{padding:4px calc(14px + env(safe-area-inset-right)) calc(4px + max(env(safe-area-inset-bottom),4px)) calc(14px + env(safe-area-inset-left))}
   .nav button{min-height:42px!important;gap:1px}
   .nav button svg{width:20px!important;height:20px!important}
   .nav .badge{top:2px}
@@ -1003,7 +1004,7 @@ if(!DB||DB.v!==5) DB=seed();
 const save=()=>{ try{ localStorage.setItem(STORE,JSON.stringify(DB)); }catch(e){} try{ syncOnSave(); }catch(e){} };
 /* ============ COLLEGAMENTO DATI (Google Sheet) ============ */
 /* ---- aggiornamento automatico dell'app ---- */
-const APP_VER='20261125-084157';
+const APP_VER='20261125-085146';
 let updWait=false;
 function checkUpdate(){ if(APP_VER==='dev'||!navigator.onLine) return;
   fetch('version.txt?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(v=>{ v=(v||'').trim(); if(!v||v===APP_VER) return;
