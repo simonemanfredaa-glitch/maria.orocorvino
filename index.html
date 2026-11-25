@@ -826,6 +826,14 @@ body.notch-r .app{padding-left:min(env(safe-area-inset-left),10px)}
   .svrow{gap:8px;display:grid;grid-template-columns:1fr 1.1fr .8fr}.svrow .field{min-width:0}.svrow label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .svrow select.input{padding-left:12px;padding-right:26px;background-position:right 8px center}
 }
+
+.svnote{display:flex;align-items:center;gap:8px;font-size:12.5px;line-height:1.35}
+@media (max-height:500px){
+  .cd-head{gap:10px}.cd-head h2{font-size:19px}.cd-head .avatar{width:44px!important;height:44px!important;font-size:16px!important}
+  .cd .row .btn,.cd-head~.row .btn{height:36px;font-size:13.5px}
+  .btn.cact{height:36px;font-size:13.5px}
+  .cd-stats>div{padding:7px 10px}.cd-stats b{font-size:15px}.cd-stats small{font-size:11.5px}
+}
 </style>
 </head>
 <body>
@@ -1021,7 +1029,7 @@ if(!DB||DB.v!==5) DB=seed();
 const save=()=>{ try{ localStorage.setItem(STORE,JSON.stringify(DB)); }catch(e){} try{ syncOnSave(); }catch(e){} };
 /* ============ COLLEGAMENTO DATI (Google Sheet) ============ */
 /* ---- aggiornamento automatico dell'app ---- */
-const APP_VER='20261125-090752';
+const APP_VER='20261125-094608';
 let updWait=false;
 function checkUpdate(){ if(APP_VER==='dev'||!navigator.onLine) return;
   fetch('version.txt?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(v=>{ v=(v||'').trim(); if(!v||v===APP_VER) return;
@@ -1870,9 +1878,9 @@ function renderSvcEdit(){
     <div style="display:flex;align-items:baseline;gap:10px"><h2 class="grow">${esc(s.name)}</h2><span class="small muted">${n} questo mese · ${eur(rev)}</span></div>
     <div class="row"><div class="field"><label>Nome</label><input class="input" id="sv-name" data-id="${s0.id}" value="${esc(s.name)}"></div><div class="field"><label>Sezione</label><select class="input" id="sv-cat">${CATS.map(c=>`<option ${c.id===s.cat?'selected':''}>${c.id}</option>`).join('')}</select></div></div>
     <div class="row svrow"><div class="field"><label>Durata</label><select class="input" id="sv-dur">${durs.map(d=>`<option value="${d}" ${d===s.dur?'selected':''}>${d} min</option>`).join('')}</select></div><div class="field"><label>Posa</label><select class="input" id="sv-posa">${posas.map(d=>`<option value="${d}" ${d===(s.posa||0)?'selected':''}>${d?d+' min':'Nessuno'}</option>`).join('')}</select></div><div class="field"><label>Prezzo €</label><input class="input" id="sv-price" inputmode="decimal" value="${s.price}"></div></div>
-    <div class="small muted" style="margin-top:-6px">Il tempo di posa è il tempo in cui puoi lavorare su un'altra cliente.</div>
-    <div class="small muted" style="display:flex;align-items:center;gap:8px"><span class="sw sm" style="background:${catPal(s.cat).bar}"></span>Colore in agenda: quello della sezione “${esc(s.cat)}”. Si cambia dalla sezione.</div>
-    <div><div style="display:flex;align-items:center">${lab('Prodotti consumati a ogni servizio')}<span class="grow"></span><button class="li-add" data-act="cons-add">+ Collega prodotto</button></div>
+    <div class="muted svnote" style="margin-top:-6px">Posa: intanto puoi seguire un'altra cliente.</div>
+    <div class="muted svnote"><span class="sw sm" style="background:${catPal(s.cat).bar}"></span><span>Colore in agenda: quello di “${esc(s.cat)}”</span></div>
+    <div><div style="display:flex;align-items:center">${lab('Prodotti consumati')}<span class="grow"></span><button class="li-add" data-act="cons-add" style="white-space:nowrap">+ Collega</button></div>
       ${cons?`<div class="cons-box">${cons}</div><div class="small muted" style="margin-top:6px">Quando incassi “${esc(s.name)}”, il magazzino scala da solo queste quantità.</div>`:`<div class="cons-empty">${ICONS.magazzino}<span>Facoltativo. Es. Colore → 1 tinta + 60 ml di ossigeno: il magazzino si scala da solo a ogni servizio.</span></div>`}</div>
     <div class="li-foot">${tgl(s.active,'sv-active')}<div class="grow"><b>Attivo</b><div class="small muted">Se lo spegni non compare nei nuovi appuntamenti, ma resta nello storico.</div></div></div>
     <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn ghost" data-act="del-svc" data-id="${s.id}" style="color:var(--danger)">Elimina</button><button class="btn primary" data-act="save-svc">Salva modifiche</button></div>
