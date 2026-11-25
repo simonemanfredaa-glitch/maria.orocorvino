@@ -540,9 +540,10 @@ textarea.input{height:auto;min-height:80px;padding:12px 14px;resize:vertical;lin
 .mgrow{display:grid;grid-template-columns:minmax(0,1fr) 96px 130px 112px 86px 112px 96px;gap:10px;align-items:center;padding:9px 16px;border-top:1px solid var(--line2)}
 .mgrow.hd{border-top:0;background:#FAFBFA;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink3);padding:9px 16px}
 .mgrow .r{text-align:right}
+.btn.cact{padding:0 8px;justify-content:center;text-align:center;min-width:0}
 .mgrow small{font-size:11.5px}
-.mname{text-align:left;display:flex;flex-direction:column;min-width:0}
-.mname b{font-weight:600}
+.mname{text-align:left;display:flex;flex-direction:column;min-width:0;max-width:100%}
+.mname b{font-weight:600;display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mname span{font-size:12.5px;color:var(--ink2)}
 .sbar{display:flex;align-items:center;gap:8px}
 .sbar .trk{flex:1;height:8px;border-radius:4px;background:var(--line2);overflow:hidden}
@@ -599,6 +600,7 @@ textarea.input{height:auto;min-height:80px;padding:12px 14px;resize:vertical;lin
   .mgrow>div:nth-child(5){display:none}
   .mgrow .pm{grid-column:3;grid-row:1}
   .mgrow>div:nth-child(3){grid-column:1 / span 2}
+  .mgrow .mname{grid-column:1 / span 2;grid-row:1}
   .set-grid{grid-template-columns:1fr}
   .mg-bar .search-in{width:100%!important}
   .fchips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
@@ -1001,7 +1003,7 @@ if(!DB||DB.v!==5) DB=seed();
 const save=()=>{ try{ localStorage.setItem(STORE,JSON.stringify(DB)); }catch(e){} try{ syncOnSave(); }catch(e){} };
 /* ============ COLLEGAMENTO DATI (Google Sheet) ============ */
 /* ---- aggiornamento automatico dell'app ---- */
-const APP_VER='20261117-205703';
+const APP_VER='20261125-084157';
 let updWait=false;
 function checkUpdate(){ if(APP_VER==='dev'||!navigator.onLine) return;
   fetch('version.txt?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(v=>{ v=(v||'').trim(); if(!v||v===APP_VER) return;
@@ -1793,13 +1795,13 @@ function renderClientDetail(){
   const visits=[...st.list].reverse().filter(a=>a.status!=='booked').slice(0,12);
   const t=c.tech||{};
   const techView=`<div class="tech-grid">${[['Colore',t.colore],['Ossigeno',t.ossigeno],['Posa',t.posa]].map(([k,v])=>`<div><small>${k}</small><b>${esc(v||'—')}</b></div>`).join('')}</div><div class="muted" style="font-size:14px;line-height:1.45">${esc(c.note||'Nessuna nota')}</div>`;
-  const techEdit=`<div class="row">${[['colore','Colore','6.0 + 6.1'],['ossigeno','Ossigeno','20 vol'],['posa','Posa','35 min']].map(([k,l,ph])=>`<div class="field"><label>${l}</label><input class="input" data-tech="${k}" value="${esc(t[k]||'')}" placeholder="${ph}"></div>`).join('')}</div><div class="field"><label>Note</label><textarea class="input" id="cnote" rows="2">${esc(c.note||'')}</textarea></div><div class="row"><div class="field"><label>Telefono</label><input class="input" id="cphone" value="${esc(c.phone||'')}"></div><div class="field"><label>Compleanno (gg/mm)</label><input class="input" id="cbday" value="${c.birthday?c.birthday.slice(3)+'/'+c.birthday.slice(0,2):''}" placeholder="18/11"></div></div>`;
+  const techEdit=`<div class="field"><label>Nome e cognome</label><input class="input" id="cname" value="${esc(c.name||'')}"></div><div class="row">${[['colore','Colore','6.0 + 6.1'],['ossigeno','Ossigeno','20 vol'],['posa','Posa','35 min']].map(([k,l,ph])=>`<div class="field"><label>${l}</label><input class="input" data-tech="${k}" value="${esc(t[k]||'')}" placeholder="${ph}"></div>`).join('')}</div><div class="field"><label>Note</label><textarea class="input" id="cnote" rows="2">${esc(c.note||'')}</textarea></div><div class="row"><div class="field"><label>Telefono</label><input class="input" id="cphone" value="${esc(c.phone||'')}"></div><div class="field"><label>Compleanno (gg/mm)</label><input class="input" id="cbday" value="${c.birthday?c.birthday.slice(3)+'/'+c.birthday.slice(0,2):''}" placeholder="18/11"></div></div>`;
   el.innerHTML=`<div class="card cd">
     <button class="btn ghost sm only-stack" data-act="cl-back" style="align-self:flex-start">${ICONS.back} Tutte le clienti</button>
     <div class="cd-head"><div class="avatar" style="width:56px;height:56px;font-size:20px">${initials(c.name)}</div><div class="grow" style="min-width:0"><h2>${esc(c.name)}</h2><div class="muted small">${esc(c.phone||'Nessun telefono')}${st.first?' · cliente dal '+parse(st.first.date).getFullYear():''}</div></div>${tags.map(tagHTML).join(' ')}</div>
-    <div class="row"><a class="btn" href="tel:${esc(c.phone)}" style="text-decoration:none">${ICONS.phone}Chiama</a><a class="btn" href="${wa}" target="_blank" rel="noopener" style="text-decoration:none">${ICONS.chat}WhatsApp</a><button class="btn primary" data-act="book-client" data-id="${c.id}">${ICONS.plus}Prenota</button></div>
+    <div class="row"><a class="btn cact" href="tel:${esc(c.phone)}" style="text-decoration:none">Chiama</a><a class="btn cact" href="${wa}" target="_blank" rel="noopener" style="text-decoration:none">WhatsApp</a><button class="btn primary cact" data-act="book-client" data-id="${c.id}">Prenota</button></div>
     <div class="cd-stats">${[[st.past.length,'visite'],[eur(st.spent),'spesa totale'],[st.last?fmtDate(st.last.date):'—','ultima visita'],[st.next?fmtDate(st.next.date)+' · '+hm(st.next.start):'—','prossimo']].map(([v,l])=>`<div><b>${v}</b><small>${l}</small></div>`).join('')}</div>
-    <div class="cd-sec"><div class="cd-title"><h3>Scheda tecnica</h3><span class="grow"></span>${ui.techEdit?`<button class="btn sm ghost" data-act="tech-cancel">Annulla</button><button class="btn sm primary" data-act="save-tech" data-id="${c.id}">Salva</button>`:`<button class="btn sm ghost" data-act="tech-edit">Modifica</button>`}</div>${ui.techEdit?techEdit:techView}</div>
+    <div class="cd-sec"><div class="cd-title"><h3>Scheda cliente</h3><span class="grow"></span>${ui.techEdit?`<button class="btn sm ghost" data-act="tech-cancel">Annulla</button><button class="btn sm primary" data-act="save-tech" data-id="${c.id}">Salva</button>`:`<button class="btn sm ghost" data-act="tech-edit">Modifica</button>`}</div>${ui.techEdit?techEdit:techView}</div>
     <div class="cd-sec privacy"><div class="grow"><b>Consenso privacy</b><div class="small muted">${c.privacy?'Firmato il '+fmtDate(c.privacy):'Non registrato'}</div></div>${tgl(!!c.privacy,'privacy',`data-id="${c.id}"`)}</div>
     <div class="cd-sec"><div class="cd-title"><h3>Storico</h3></div>${visits.length?visits.map(a=>`<div class="hist"><div style="width:84px" class="small muted">${fmtDate(a.date)}</div><div class="grow small"><b>${a.services.map(x=>esc(svc(x).name)).join(' + ')}</b>${a.payment&&a.payment.items.some(i=>i.kind==='prodotto')?'<br><span class="muted">+ '+a.payment.items.filter(i=>i.kind==='prodotto').map(i=>esc(i.label)).join(', ')+'</span>':''}</div><div style="font-weight:700" class="small">${a.status==='paid'?eur(a.payment.total):'<span class="tag warn">Non venuta</span>'}</div></div>`).join(''):'<div class="empty" style="padding:16px">Ancora nessuna visita</div>'}</div>
   </div>`;
@@ -2246,7 +2248,7 @@ document.addEventListener('click',e=>{
     case 'book-client': { const c=id; ui.view='agenda'; render(); newDraft(); setDraftClient(c); renderDraft(); break; }
     case 'tech-edit': ui.techEdit=true; renderClientDetail(); break;
     case 'tech-cancel': ui.techEdit=false; renderClientDetail(); break;
-    case 'save-tech': { const c=cli(id); c.tech=c.tech||{}; document.querySelectorAll('[data-tech]').forEach(i=>c.tech[i.dataset.tech]=i.value.trim()); c.note=$('#cnote').value; c.phone=$('#cphone').value.trim(); const b=$('#cbday').value.trim().match(/^(\d{1,2})\/(\d{1,2})$/); c.birthday=b?pad(+b[2])+'-'+pad(+b[1]):''; ui.techEdit=false; save(); renderClientList(); renderClientDetail(); toast('Scheda salvata'); break; }
+    case 'save-tech': { const c=cli(id); c.tech=c.tech||{}; document.querySelectorAll('[data-tech]').forEach(i=>c.tech[i.dataset.tech]=i.value.trim()); c.note=$('#cnote').value; c.phone=$('#cphone').value.trim(); const nn=$('#cname').value.trim(); if(nn) c.name=nn; const b=$('#cbday').value.trim().match(/^(\d{1,2})\/(\d{1,2})$/); c.birthday=b?pad(+b[2])+'-'+pad(+b[1]):''; ui.techEdit=false; save(); renderClientList(); renderClientDetail(); toast('Scheda salvata'); break; }
     case 'privacy': { const c=cli(id); c.privacy=c.privacy?'':TODAY; save(); renderClientDetail(); toast(c.privacy?'Consenso registrato':'Consenso tolto'); break; }
     /* listino */
     case 'sel-svc': ui.svcDraft=null; ui.svcSel=id; ui.svcMobileEdit=true; if(isStack()) renderListino(); else { renderSvcList(); renderSvcEdit(); } break;
